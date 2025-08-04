@@ -9,6 +9,7 @@ struct NotificationHelper {
         content.title = "Upcoming Trip: \(plan.name)"
         content.body = "Get ready! Your travel is on \(formatted(plan.date)). Tap to check your list."
         content.sound = .default
+        content.userInfo = ["planID": plan.id.uuidString] // THIS LINE is critical!
 
         let triggerComponents = Calendar.current.dateComponents(
             [.year, .month, .day, .hour, .minute, .second],

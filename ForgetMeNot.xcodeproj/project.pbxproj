@@ -27,6 +27,7 @@
 		C83E7E902E4054E700FD616A /* ForgetMeNot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ForgetMeNot.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C83E7E9F2E4054EA00FD616A /* ForgetMeNotTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ForgetMeNotTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C83E7EA92E4054EA00FD616A /* ForgetMeNotUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ForgetMeNotUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C8AE75942E40E9D60031EFFC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -75,6 +76,7 @@
 		C83E7E872E4054E700FD616A = {
 			isa = PBXGroup;
 			children = (
+				C8AE75942E40E9D60031EFFC /* Info.plist */,
 				C83E7E922E4054E700FD616A /* ForgetMeNot */,
 				C83E7EA22E4054EA00FD616A /* ForgetMeNotTests */,
 				C83E7EAC2E4054EA00FD616A /* ForgetMeNotUITests */,
@@ -400,6 +402,7 @@
 				DEVELOPMENT_TEAM = 7FJQ42BTPU;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -428,6 +431,7 @@
 				DEVELOPMENT_TEAM = 7FJQ42BTPU;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
