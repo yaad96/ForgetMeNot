@@ -1,61 +1,88 @@
-//
-//  ContentView.swift
-//  ForgetMeNot
-//
-//  Created by Mainul Hossain on 8/3/25.
-//
-
 import SwiftUI
 import SwiftData
 
 struct ContentView: View {
+    @Query(sort: \TravelPlan.date, order: .forward) var plans: [TravelPlan]
     @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+
+    @State private var showNewPlan = false
+    @State private var selectedPlan: TravelPlan?
 
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
+        NavigationStack {
+            VStack(spacing: 0) {
+                // Custom app header
+                VStack(spacing: 0) {
+                    Text("🧳 ForgetMeNot")
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .foregroundColor(.blue)
+                    Text("Let your iPhone remember important details!")
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .foregroundColor(.secondary)
+                        .padding(.top, 2)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 32)
+                .padding(.bottom, 18)
+                .background(
+                    Color(.systemGray6)
+                        .opacity(0.65)
+                        .ignoresSafeArea(edges: .top)
+                )
+
+                // "Create a New Travel Plan" button
+                Button(action: {
+                    showNewPlan = true
+                }) {
+                    HStack {
+                        Image(systemName: "plus.circle.fill")
+                        Text("Create a New Travel Plan")
+                            .font(.headline)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color.blue.opacity(0.1))
+                    .cornerRadius(12)
+                }
+                .padding(.top, 10)
+                .sheet(isPresented: $showNewPlan) {
+                    NewTravelPlanView { newPlan in
+                        if let plan = newPlan {
+                            selectedPlan = plan
+                        }
+                        showNewPlan = false
                     }
                 }
-                .onDelete(perform: deleteItems)
-            }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
+
+                // List of plans
+                List {
+                    ForEach(plans) { plan in
+                        Button {
+                            selectedPlan = plan
+                        } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(plan.name)
+                                    .font(.headline)
+                                Text(plan.date, style: .date)
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                    }
+                    .onDelete { idxSet in
+                        for idx in idxSet {
+                            modelContext.delete(plans[idx])
+                        }
                     }
                 }
-            }
-        } detail: {
-            Text("Select an item")
-        }
-    }
+                .listStyle(.insetGrouped)
+                .navigationDestination(item: $selectedPlan) { plan in
+                    ChecklistView(plan: plan)
+                }
 
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
+                Spacer()
             }
         }
     }
 }
 
-#Preview {
-    ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
-}
