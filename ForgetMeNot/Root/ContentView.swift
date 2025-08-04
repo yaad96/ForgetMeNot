@@ -67,7 +67,7 @@ struct ContentView: View {
                 Spacer()
             }
             .navigationDestination(item: $selectedPlan) { plan in
-                ChecklistView(plan: plan)
+                TravelPlanDetailView(plan: plan)
             }
         }
     }
