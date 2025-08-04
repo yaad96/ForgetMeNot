@@ -7,9 +7,13 @@ class TravelPlan: Identifiable {
     var name: String
     var date: Date
     @Relationship(deleteRule: .cascade) var tasks: [TravelTask]
-    var reminderOffset: TimeInterval // in seconds
+    var reminderOffset: TimeInterval
 
-    init(name: String, date: Date, tasks: [TravelTask] = [], reminderOffset: TimeInterval = -3600, id: UUID = .init()) {
+    init(name: String,
+         date: Date,
+         tasks: [TravelTask] = [],
+         reminderOffset: TimeInterval = -3600,
+         id: UUID = .init()) {
         self.id = id
         self.name = name
         self.date = date
@@ -22,12 +26,15 @@ class TravelPlan: Identifiable {
 class TravelTask: Identifiable {
     @Attribute(.unique) var id: UUID
     var title: String
-    var isDone: Bool
+    var subjectImageID: UUID?
+    var isCompleted: Bool = false
 
-    init(title: String, isDone: Bool = false, id: UUID = .init()) {
+    init(title: String,
+         subjectImageID: UUID? = nil,
+         id: UUID = .init()) {
         self.id = id
         self.title = title
-        self.isDone = isDone
+        self.subjectImageID = subjectImageID
     }
 }
 
