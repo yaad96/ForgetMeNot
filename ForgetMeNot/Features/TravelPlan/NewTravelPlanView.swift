@@ -52,76 +52,172 @@ struct NewTravelPlanView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView(.vertical, showsIndicators: true) {
-                VStack(alignment: .leading, spacing: 18) {
-                    TextField("Plan Name", text: $planName)
-                        .font(.title2)
-                        .textFieldStyle(.roundedBorder)
-                    Text("Travel Date & Time")
-                        .font(.headline)
-                    DatePicker("", selection: $travelDate, displayedComponents: [.date, .hourAndMinute])
-                        .labelsHidden()
-                        .padding(.bottom, 8)
-                    Text("When should we remind you?")
-                        .font(.headline)
-                    DatePicker("", selection: $reminderDate, in: ...travelDate, displayedComponents: [.date, .hourAndMinute])
-                        .labelsHidden()
-                        .padding(.bottom, 16)
-                    Text("Tasks").font(.headline)
-                    ForEach(tasks.indices, id: \.self) { idx in
-                        HStack {
-                            TextField("Task...", text: Binding(
-                                get: { tasks[idx].title },
-                                set: { tasks[idx].title = $0 }
-                            ))
-                            .textFieldStyle(.roundedBorder)
-                            if let id = tasks[idx].subjectImageID,
-                               let subj = subjects.first(where: { $0.id == id }),
-                               let thumb = subj.thumbnail {
-                                Button {
-                                    showSubjectPreview = subj
-                                } label: {
-                                    Image(uiImage: thumb)
-                                        .resizable()
-                                        .frame(width: 38, height: 38)
-                                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                                }
-                            }
-                            Button {
-                                editingTaskIndex = idx
-                                showImageSourcePicker = true
-                            } label: {
-                                Image(systemName: "photo.badge.plus")
-                            }
-                            .buttonStyle(.plain)
-                            if tasks.count > 1 {
-                                Button {
-                                    tasks.remove(at: idx)
-                                } label: {
-                                    Image(systemName: "minus.circle")
-                                        .foregroundColor(.red)
-                                }
-                                .buttonStyle(.plain)
-                            }
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 26) {
+                    // PLAN DETAILS CARD
+                    VStack(spacing: 20) {
+                        TextField("Give your plan a name...", text: $planName)
+                            .padding(.vertical, 16)
+                            .padding(.horizontal, 22)
+                            .font(.system(size: 22, weight: .semibold))
+                            .background(Color(.systemGray6))
+                            .cornerRadius(16)
+                            .shadow(color: Color.black.opacity(0.03), radius: 2, y: 1)
+
+                        VStack(alignment: .leading, spacing: 14) {
+                            Text("Travel Date & Time")
+                                .font(.system(size: 17, weight: .bold))
+                                .foregroundColor(.secondary)
+                            DatePicker("", selection: $travelDate, displayedComponents: [.date, .hourAndMinute])
+                                .labelsHidden()
+                                .datePickerStyle(.compact)
+                        }
+
+                        VStack(alignment: .leading, spacing: 14) {
+                            Text("Reminder")
+                                .font(.system(size: 17, weight: .bold))
+                                .foregroundColor(.secondary)
+                            DatePicker("", selection: $reminderDate, in: ...travelDate, displayedComponents: [.date, .hourAndMinute])
+                                .labelsHidden()
+                                .datePickerStyle(.compact)
                         }
                     }
-                    Button {
-                        tasks.append(TravelTask(title: ""))
-                    } label: {
-                        Label("Add Task", systemImage: "plus")
-                            .padding(.vertical, 4)
-                    }
+                    .padding()
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(22)
+                    .shadow(color: Color.black.opacity(0.08), radius: 16, y: 6)
+                    .padding(.horizontal, 10)
                     .padding(.top, 8)
+
+                    // TASKS CARD
+                    VStack(spacing: 18) {
+                        HStack {
+                            Text("Tasks")
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(.primary)
+                            Spacer()
+                        }
+
+                        ForEach(tasks.indices, id: \.self) { idx in
+                            HStack(alignment: .center, spacing: 12) {
+                                // SUBJECT IMAGE THUMBNAIL (modern style)
+                                if let id = tasks[idx].subjectImageID,
+                                   let subj = subjects.first(where: { $0.id == id }),
+                                   let thumb = subj.thumbnail {
+                                    Button {
+                                        showSubjectPreview = subj
+                                    } label: {
+                                        Image(uiImage: thumb)
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(width: 48, height: 48)
+                                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 16)
+                                                    .stroke(Color.white.opacity(0.9), lineWidth: 2)
+                                            )
+                                            .shadow(color: Color.black.opacity(0.13), radius: 8, y: 3)
+                                            .padding(.trailing, 2)
+                                            .transition(.scale.combined(with: .opacity))
+                                    }
+                                    .buttonStyle(.plain)
+                                } else {
+                                    Button {
+                                        editingTaskIndex = idx
+                                        showImageSourcePicker = true
+                                    } label: {
+                                        ZStack {
+                                            RoundedRectangle(cornerRadius: 16)
+                                                .fill(Color(.systemGray5))
+                                                .frame(width: 48, height: 48)
+                                            Image(systemName: "photo.on.rectangle")
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fit)
+                                                .frame(width: 28, height: 28)
+                                                .foregroundColor(.blue.opacity(0.82))
+                                            Image(systemName: "plus.circle.fill")
+                                                .resizable()
+                                                .foregroundColor(.accentColor)
+                                                .background(Color.white, in: Circle())
+                                                .frame(width: 21, height: 21)
+                                                .offset(x: 14, y: 14) // lower right overlap
+                                                .shadow(color: .black.opacity(0.13), radius: 2, x: 1, y: 1)
+                                        }
+                                    }
+                                    .buttonStyle(.plain)
+                                    .padding(.trailing, 2)
+
+                                }
+
+                                // TASK FIELD
+                                TextField("What to do?", text: Binding(
+                                    get: { tasks[idx].title },
+                                    set: { tasks[idx].title = $0 }
+                                ))
+                                .padding(.vertical, 12)
+                                .padding(.horizontal, 12)
+                                .background(Color(.systemGray6))
+                                .cornerRadius(12)
+                                .font(.system(size: 17, weight: .regular))
+
+                                // REMOVE TASK
+                                if tasks.count > 1 {
+                                    Button {
+                                        tasks.remove(at: idx)
+                                    } label: {
+                                        Image(systemName: "minus.circle.fill")
+                                            .foregroundColor(.red)
+                                            .font(.system(size: 22, weight: .semibold))
+                                    }
+                                    .buttonStyle(.plain)
+                                    .padding(.leading, 4)
+                                }
+                            }
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 4)
+                            .background(.ultraThinMaterial)
+                            .cornerRadius(18)
+                            .shadow(color: Color.black.opacity(0.04), radius: 2, y: 1)
+                        }
+
+                        // ADD TASK BUTTON (floating style)
+                        Button {
+                            withAnimation(.spring()) {
+                                tasks.append(TravelTask(title: ""))
+                            }
+                        } label: {
+                            Label("Add Task", systemImage: "plus.circle.fill")
+                                .font(.system(size: 19, weight: .semibold))
+                                .padding(.vertical, 11)
+                                .padding(.horizontal, 18)
+                                .background(Color.accentColor.opacity(0.92))
+                                .foregroundColor(.white)
+                                .cornerRadius(14)
+                                .shadow(color: Color.accentColor.opacity(0.17), radius: 8, y: 2)
+                        }
+                        .padding(.top, 8)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                    .padding()
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(22)
+                    .shadow(color: Color.black.opacity(0.07), radius: 14, y: 4)
+                    .padding(.horizontal, 10)
+
+                    Spacer(minLength: 20)
                 }
-                .padding()
+                .padding(.bottom, 32)
             }
             .navigationTitle("New Travel Plan")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { savePlan() }
+                        .font(.system(size: 17, weight: .semibold))
                 }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { cancel() }
+                        .font(.system(size: 17, weight: .regular))
                 }
             }
             .alert("Plan name is required.", isPresented: $showNameError) {
