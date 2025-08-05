@@ -26,6 +26,10 @@
     <string>Allow ForgetMeNot to use your camera for photos</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>Allow ForgetMeNot to access your photos</string>
+    <key>NSCalendarsUsageDescription</key>
+    <string>This app needs access to your calendar to suggest travel tasks.</string>
+    <key>NSRemindersUsageDescription</key>
+    <string>This app needs access to your Reminders to help you plan better.</string>
 </dict>
 </plist>
 

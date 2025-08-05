@@ -2,59 +2,108 @@ import SwiftUI
 import SwiftData
 
 struct ContentView: View {
+    
+
     @Query(sort: \TravelPlan.date, order: .forward) var plans: [TravelPlan]
     @Environment(\.modelContext) private var modelContext
 
     @State private var showNewPlan = false
     @State private var selectedPlan: TravelPlan?
+    
+    @State private var showAllUpcoming = false
+
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 0) {
                     // Header Card
-                    VStack(spacing: 6) {
-                        Text("🧳 ForgetMeNot")
-                            .font(.system(size: 34, weight: .bold, design: .rounded))
-                            .foregroundColor(.blue)
-                        Text("Let your iPhone remember important details!")
-                            .foregroundColor(.secondary)
-                            .font(.system(size: 18, weight: .medium))
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding(.vertical, 24)
-                    .padding(.horizontal, 14)
-                    .background(.ultraThinMaterial)
-                    .cornerRadius(26)
-                    .shadow(color: Color.blue.opacity(0.04), radius: 8, y: 3)
-                    .padding(.horizontal, 14)
-                    .padding(.top, 30)
+                    VStack(spacing: 4) {
+                        
 
-                    // New Plan Button
-                    Button {
-                        showNewPlan = true
-                    } label: {
-                        Label("Create a New Travel Plan", systemImage: "plus.circle.fill")
-                            .font(.system(size: 20, weight: .bold))
-                            .padding(.vertical, 18)
-                            .frame(maxWidth: .infinity)
-                            .background(
-                                LinearGradient(
-                                    colors: [Color.blue.opacity(0.12), Color.accentColor.opacity(0.11)],
-                                    startPoint: .leading, endPoint: .trailing
-                                )
-                            )
-                            .cornerRadius(15)
-                            .shadow(color: Color.accentColor.opacity(0.06), radius: 6, y: 2)
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.top, 18)
-                    .sheet(isPresented: $showNewPlan) {
-                        NewTravelPlanView { newPlan in
-                            if let plan = newPlan { selectedPlan = plan }
-                            showNewPlan = false
+                            Text("🧳ForgetMeNot")
+                                .font(.system(size: 28, weight: .bold, design: .monospaced))
+                                .foregroundColor(.accentColor)
+                                .shadow(color: .accentColor.opacity(0.04), radius: 2, y: 1)
+                                .padding(.bottom, 2)
+                            Text("Let your iPhone remember important details!")
+                                .foregroundColor(.secondary)
+                                .font(.system(size: 14, weight: .medium, design: .monospaced))
+                                .multilineTextAlignment(.center)
                         }
-                    }
+                        .padding(.vertical, 18)
+                        .padding(.horizontal, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(Color(.systemBackground).opacity(0.72))
+                                .shadow(color: .accentColor.opacity(0.09), radius: 5, y: 2)
+                        )
+                        .padding(.horizontal, 14)
+                        .padding(.top, 22)
+
+                        // Sleek Modern Buttons
+                        HStack(spacing: 10) {
+                            Button {
+                                showNewPlan = true
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "plus.circle.fill")
+                                    Text("New Plan")
+                                }
+                                .font(.system(size: 16, weight: .semibold))
+                                .padding(.vertical, 10)
+                                .padding(.horizontal, 18)
+                                .background(
+                                    Capsule()
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [Color.accentColor.opacity(0.15), Color.blue.opacity(0.12)],
+                                                startPoint: .topLeading, endPoint: .bottomTrailing
+                                            )
+                                        )
+                                )
+                            }
+                            .foregroundColor(.accentColor)
+                            .buttonStyle(.plain)
+                            .sheet(isPresented: $showNewPlan) {
+                                NewTravelPlanView { newPlan in
+                                    if let plan = newPlan { selectedPlan = plan }
+                                    showNewPlan = false
+                                }
+                            }
+
+                            Button {
+                                showAllUpcoming = true
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "rectangle.stack")
+                                    Text("From Calendar")
+                                }
+                                .font(.system(size: 16, weight: .semibold))
+                                .padding(.vertical, 10)
+                                .padding(.horizontal, 18)
+                                .background(
+                                    Capsule()
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [Color.blue.opacity(0.14), Color.accentColor.opacity(0.13)],
+                                                startPoint: .topLeading, endPoint: .bottomTrailing
+                                            )
+                                        )
+                                )
+                            }
+                            .foregroundColor(.accentColor)
+                            .buttonStyle(.plain)
+                            .sheet(isPresented: $showAllUpcoming) {
+                                NavigationStack {
+                                    AllUpcomingView(calendarManager: CalendarManager())
+                                }
+                            }
+                        }
+                        .padding(.top, 4)
+                        .padding(.horizontal, 18)
+
+
 
                     // Sections
                     let incompletePlans = plans.filter { !$0.isCompleted }
@@ -73,21 +122,20 @@ struct ContentView: View {
                         // Incomplete
                         if !incompletePlans.isEmpty {
                             SectionHeader(text: "Upcoming Plans", systemImage: "clock")
-                                .padding(.top, 28)
+                                .padding(.top , 28)
+                                .padding(.bottom, 8)
                                 .padding(.leading, 8)
                             VStack(spacing: 14) {
                                 ForEach(incompletePlans) { plan in
-                                    PlanCard(plan: plan, isCompleted: false) {
+                                    PlanCard(plan: plan, isCompleted: false, onTap: {
                                         selectedPlan = plan
-                                    }
-                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                        Button(role: .destructive) {
-                                            modelContext.delete(plan)
-                                        } label: {
-                                            Label("Delete", systemImage: "trash")
-                                        }
-                                    }
+                                    }, onDelete: {
+                                        modelContext.delete(plan)
+                                    })
                                 }
+
+                                
+
                             }
                             .padding(.horizontal, 14)
                         }
@@ -99,17 +147,12 @@ struct ContentView: View {
                                 .padding(.leading, 8)
                             VStack(spacing: 14) {
                                 ForEach(completedPlans) { plan in
-                                    PlanCard(plan: plan, isCompleted: true) {
+                                    PlanCard(plan: plan, isCompleted: true, onTap: {
                                         selectedPlan = plan
-                                    }
+                                    }, onDelete: {
+                                        modelContext.delete(plan)
+                                    })
                                     .opacity(0.7)
-                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                        Button(role: .destructive) {
-                                            modelContext.delete(plan)
-                                        } label: {
-                                            Label("Delete", systemImage: "trash")
-                                        }
-                                    }
                                 }
                             }
                             .padding(.horizontal, 14)
@@ -133,63 +176,73 @@ struct SectionHeader: View {
     let text: String
     let systemImage: String
     var body: some View {
-        HStack(spacing: 9) {
+        HStack(spacing: 7) {
             Image(systemName: systemImage)
                 .foregroundColor(.accentColor)
-                .font(.system(size: 17, weight: .bold))
+                .font(.system(size: 15, weight: .semibold))
             Text(text)
-                .font(.system(size: 18, weight: .semibold))
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(.secondary)
             Spacer()
         }
+        .padding(.leading, 2)
+        .padding(.bottom, 3)
     }
 }
+
 
 // MARK: - Plan Card
 struct PlanCard: View {
     let plan: TravelPlan
     let isCompleted: Bool
     let onTap: () -> Void
+    let onDelete: () -> Void
 
     var body: some View {
-        Button {
-            onTap()
-        } label: {
-            HStack(spacing: 16) {
+        HStack(spacing: 14) {
+            Button(action: onTap) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(isCompleted ? Color.green.opacity(0.09) : Color.blue.opacity(0.07))
-                        .frame(width: 56, height: 56)
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(isCompleted ? Color.green.opacity(0.08) : Color.blue.opacity(0.06))
+                        .frame(width: 42, height: 42)
                     Image(systemName: isCompleted ? "checkmark.circle.fill" : "airplane.departure")
-                        .font(.system(size: 26, weight: .bold))
+                        .font(.system(size: 19, weight: .semibold))
                         .foregroundColor(isCompleted ? .green : .blue)
                 }
-                VStack(alignment: .leading, spacing: 5) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(plan.name)
-                        .font(.system(size: 19, weight: .semibold))
+                        .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.primary)
                         .lineLimit(1)
-                    HStack(spacing: 8) {
+                    HStack(spacing: 7) {
                         Image(systemName: "calendar")
-                            .font(.system(size: 14, weight: .medium))
+                            .font(.system(size: 11, weight: .medium))
                             .foregroundColor(.secondary)
                         Text(plan.date, style: .date)
-                            .font(.system(size: 16, weight: .medium))
+                            .font(.system(size: 13, weight: .regular))
                             .foregroundColor(.secondary)
                     }
                 }
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .foregroundColor(.gray)
-                    .opacity(0.7)
+                    .foregroundColor(.gray.opacity(0.6))
+                    .font(.system(size: 14, weight: .semibold))
             }
-            .padding(.vertical, 12)
-            .padding(.horizontal, 16)
-            .background(.thinMaterial)
-            .cornerRadius(20)
-            .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
+            .buttonStyle(.plain)
+
+            Button(action: onDelete) {
+                Image(systemName: "trash")
+                    .foregroundColor(.red.opacity(0.75))
+                    .font(.system(size: 16, weight: .medium))
+            }
+            .buttonStyle(.plain)
+            .padding(.leading, 2)
         }
-        .buttonStyle(.plain)
+        .padding(.vertical, 7)
+        .padding(.horizontal, 10)
+        .background(.thinMaterial)
+        .cornerRadius(8)
+        .shadow(color: .black.opacity(0.03), radius: 4, y: 1)
     }
 }
 
