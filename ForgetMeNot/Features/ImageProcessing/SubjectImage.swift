@@ -21,7 +21,12 @@ class SubjectImage: Identifiable {
         let scale = min(maxSide / max(img.size.width, img.size.height), 1)
         let newSize = CGSize(width: img.size.width * scale, height: img.size.height * scale)
         let renderer = UIGraphicsImageRenderer(size: newSize)
-        return renderer.image { _ in img.draw(in: CGRect(origin: .zero, size: newSize)) }
+        return renderer.image { ctx in
+            UIColor.systemBackground.setFill()
+            ctx.fill(CGRect(origin: .zero, size: newSize))
+            img.draw(in: CGRect(origin: .zero, size: newSize))
+        }
+
     }
 
 }
