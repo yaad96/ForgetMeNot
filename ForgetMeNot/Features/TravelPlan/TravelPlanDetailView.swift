@@ -4,6 +4,7 @@ import UIKit
 
 struct TravelPlanDetailView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
 
     @Bindable var plan: TravelPlan
     @Query var subjects: [SubjectImage]
@@ -14,6 +15,14 @@ struct TravelPlanDetailView: View {
 
     @State private var tempTravelDate: Date
     @State private var tempNotificationOffset: TimeInterval
+
+    // Image editing states
+    @State private var editingTaskIndex: Int? = nil
+    @State private var showImageSource = false
+    @State private var imageSource: UIImagePickerController.SourceType?
+    @State private var showImagePicker = false
+    @State private var imageToLift: UIImage?
+    @State private var showImageLift = false
 
     init(plan: TravelPlan) {
         self._plan = Bindable(wrappedValue: plan)
@@ -36,7 +45,7 @@ struct TravelPlanDetailView: View {
                 .font(.largeTitle.bold())
                 .padding(.top)
 
-            // Travel Date (editable only in editing mode and if not completed)
+            // Travel Date
             VStack(alignment: .leading, spacing: 4) {
                 Text("Travel Date:")
                     .font(.headline)
@@ -47,7 +56,7 @@ struct TravelPlanDetailView: View {
             .padding(.top, 2)
             .padding(.horizontal)
 
-            // Notification Date (editable only in editing mode and if not completed)
+            // Notification Date
             VStack(alignment: .leading, spacing: 4) {
                 Text("Notification:")
                     .font(.headline)
@@ -68,57 +77,122 @@ struct TravelPlanDetailView: View {
             .padding(.bottom, 8)
             .padding(.horizontal)
 
-            // ---- EDIT BUTTON ----
+            // ---- SINGLE DYNAMIC EDIT/SAVE BUTTON ----
             if !plan.isCompleted {
                 Button {
-                    isEditing.toggle()
+                    if !isEditing {
+                        // Enter edit mode, copy temp fields
+                        tempTravelDate = plan.date
+                        tempNotificationOffset = plan.reminderOffset
+                        isEditing = true
+                    } else {
+                        // Save changes and exit edit mode
+                        plan.date = tempTravelDate
+                        plan.reminderOffset = tempNotificationOffset
+                        NotificationHelper.cancelReminder(for: plan)
+                        NotificationHelper.scheduleTravelReminder(for: plan, offset: plan.reminderOffset)
+                        isEditing = false
+                        showSaveAlert = true
+                    }
                 } label: {
-                    Text(isEditing ? "Stop Editing" : "Edit Tasks")
+                    Text(isEditing ? "Save Changes" : "Edit Tasks")
                         .font(.headline)
-                        .foregroundColor(isEditing ? .red : .blue)
-                        .padding(.vertical, 4)
+                        .foregroundColor(.white)
+                        .padding()
                         .frame(maxWidth: .infinity)
+                        .background(isEditing ? Color.blue : Color.green)
+                        .cornerRadius(12)
+                        .shadow(radius: 3)
+                        .padding(.horizontal)
+                        .padding(.top, 10)
                 }
-                .padding(.horizontal)
-                .padding(.top, 6)
             }
 
             // Tasks Section
             List {
                 Section("Tasks") {
-                    ForEach($plan.tasks) { $task in
-                        HStack {
-                            // Always allow toggling checkboxes unless plan is completed
+                    ForEach(Array(plan.tasks.enumerated()), id: \.element.id) { idx, _ in
+                        HStack(alignment: .center, spacing: 16) {
+                            // Checkbox
                             Button {
                                 guard !plan.isCompleted else { return }
-                                task.isCompleted.toggle()
+                                plan.tasks[idx].isCompleted.toggle()
                             } label: {
-                                Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
-                                    .foregroundColor(task.isCompleted ? .green : .secondary)
+                                Image(systemName: plan.tasks[idx].isCompleted ? "checkmark.circle.fill" : "circle")
+                                    .font(.system(size: 28, weight: .medium))
+                                    .foregroundColor(plan.tasks[idx].isCompleted ? .green : .secondary)
                             }
                             .buttonStyle(.plain)
 
-                            // Allow editing title only if in editing mode and not completed
-                            TextField("Task", text: $task.title)
+                            // Title
+                            TextField("Task", text: $plan.tasks[idx].title)
                                 .disabled(!(isEditing && !plan.isCompleted))
-                                .strikethrough(task.isCompleted)
-                                .foregroundColor(task.isCompleted ? .secondary : .primary)
+                                .strikethrough(plan.tasks[idx].isCompleted)
+                                .foregroundColor(plan.tasks[idx].isCompleted ? .secondary : .primary)
+                                .font(.system(size: 18, weight: .regular))
+                                .padding(.vertical, 10)
 
-                            if let id = task.subjectImageID,
+                            Spacer()
+
+                            // Image logic (rounded rect thumbnail)
+                            if let id = plan.tasks[idx].subjectImageID,
                                let subj = subjects.first(where: { $0.id == id }),
                                let thumb = subj.thumbnail {
                                 Button {
-                                    selectedSubject = subj
+                                    if isEditing && !plan.isCompleted {
+                                        editingTaskIndex = idx // use correct idx
+                                        showImageSource = true
+                                    } else {
+                                        selectedSubject = subj
+                                    }
                                 } label: {
                                     Image(uiImage: thumb)
                                         .resizable()
-                                        .frame(width: 32, height: 32)
-                                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(width: 44, height: 44)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                                .contextMenu {
+                                    if isEditing && !plan.isCompleted {
+                                        Button(role: .destructive) {
+                                            plan.tasks[idx].subjectImageID = nil
+                                        } label: {
+                                            Label("Remove Image", systemImage: "trash")
+                                        }
+                                    }
+                                }
+                            } else if isEditing && !plan.isCompleted {
+                                Button {
+                                    editingTaskIndex = idx // use correct idx
+                                    showImageSource = true
+                                } label: {
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(Color.secondary.opacity(0.15))
+                                            .frame(width: 44, height: 44)
+                                        Image(systemName: "plus")
+                                            .foregroundColor(.blue)
+                                            .font(.system(size: 24, weight: .bold))
+                                    }
                                 }
                                 .buttonStyle(.plain)
                             }
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color(.systemBackground))
+                                .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
+                        )
+                        .padding(.vertical, 6)
                     }
+
                     .onDelete { indices in
                         guard (isEditing && !plan.isCompleted) else { return }
                         plan.tasks.remove(atOffsets: indices)
@@ -136,32 +210,6 @@ struct TravelPlanDetailView: View {
             .listStyle(.insetGrouped)
             .animation(.default, value: plan.tasks)
 
-            // ---- SAVE CHANGES BUTTON ----
-            if isEditing && !plan.isCompleted {
-                Button {
-                    plan.date = tempTravelDate
-                    plan.reminderOffset = tempNotificationOffset
-
-                    // Cancel any existing, then schedule new notification
-                    NotificationHelper.cancelReminder(for: plan)
-                    NotificationHelper.scheduleTravelReminder(for: plan, offset: plan.reminderOffset)
-
-                    isEditing = false
-                    showSaveAlert = true
-                } label: {
-                    Text("Save Changes")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color.blue)
-                        .cornerRadius(12)
-                        .shadow(radius: 3)
-                        .padding(.horizontal)
-                        .padding(.top, 10)
-                }
-            }
-
             // ---- ALL TASKS COMPLETED BUTTON ----
             if allDone && !plan.isCompleted {
                 Button {
@@ -169,7 +217,7 @@ struct TravelPlanDetailView: View {
                     NotificationHelper.cancelReminder(for: plan)
                     showCompletedAlert = true
                 } label: {
-                    Text("All Tasks Completed")
+                    Text("I'm All Set")
                         .font(.headline)
                         .foregroundColor(.white)
                         .padding()
@@ -202,15 +250,48 @@ struct TravelPlanDetailView: View {
         .sheet(item: $selectedSubject) { subj in
             SubjectDetailView(subject: subj)
         }
-        .alert("Changes Saved!", isPresented: $showSaveAlert) {
-            Button("OK") {
-                dismiss()
+        // IMAGE SOURCE SHEET
+        .sheet(isPresented: $showImageSource) {
+            ImageSourcePicker { pickedSource in
+                imageSource = pickedSource
+                showImagePicker = true
             }
         }
-        .alert("You did it champ!", isPresented: $showCompletedAlert) {
-            Button("OK") {
-                dismiss()
+        // IMAGE PICKER
+        .sheet(isPresented: $showImagePicker) {
+            if let imageSource = imageSource {
+                FMNImagePicker(sourceType: imageSource) { image in
+                    if let img = image {
+                        imageToLift = img
+                        showImageLift = true
+                    }
+                    showImagePicker = false
+                }
             }
+        }
+        // SUBJECT LIFT SHEET
+        .sheet(isPresented: $showImageLift) {
+            if let image = imageToLift, let idx = editingTaskIndex {
+                ImageLiftView(uiImage: image) { lifted in
+                    // Save new subject image to SwiftData and set its ID
+                    if let data = lifted.pngData() {
+                        let newSubject = SubjectImage(data: data)
+                        modelContext.insert(newSubject)
+                        try? modelContext.save()
+                        plan.tasks[idx].subjectImageID = newSubject.id
+                    }
+
+                    imageToLift = nil
+                    editingTaskIndex = nil
+                    showImageLift = false
+                }
+            }
+        }
+        .alert("Changes Saved!", isPresented: $showSaveAlert) {
+            Button("OK") { dismiss() }
+        }
+        .alert("You did it champ!", isPresented: $showCompletedAlert) {
+            Button("OK") { dismiss() }
         }
     }
 }
