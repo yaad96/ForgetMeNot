@@ -24,11 +24,15 @@ extension UIImage {
     }
 }
 
+
 struct NewTravelPlanView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
     @Query var subjects: [SubjectImage]
+    
+    @State private var showImageSourceDialog = false
+    @State private var activeImagePickerSheet: ImagePickerSheet?
 
     @State private var planName: String = ""
     @State private var travelDate: Date = .now.addingTimeInterval(86400)
@@ -39,13 +43,13 @@ struct NewTravelPlanView: View {
         TravelTask(title: "Pack passport")
     ]
 
-    @State private var showImageSourcePicker = false
+    //@State private var showImageSourcePicker = false
     @State private var imageToLift: UIImage?
     @State private var editingTaskIndex: Int?
     @State private var showImageLift = false
     @State private var showSubjectPreview: SubjectImage?
-    @State private var imagePickerSourceType: UIImagePickerController.SourceType?
-    @State private var showFMNImagePicker = false
+    //@State private var imagePickerSourceType: UIImagePickerController.SourceType?
+    //@State private var showFMNImagePicker = false
     @State private var showNameError = false
 
     var onDone: (TravelPlan?) -> Void
@@ -53,6 +57,7 @@ struct NewTravelPlanView: View {
     var body: some View {
         NavigationStack {
             ScrollView(.vertical, showsIndicators: false) {
+                
                 VStack(spacing: 26) {
                     // PLAN DETAILS CARD
                     VStack(spacing: 20) {
@@ -124,7 +129,7 @@ struct NewTravelPlanView: View {
                                 } else {
                                     Button {
                                         editingTaskIndex = idx
-                                        showImageSourcePicker = true
+                                        showImageSourceDialog = true
                                     } label: {
                                         ZStack {
                                             RoundedRectangle(cornerRadius: 16)
@@ -140,13 +145,12 @@ struct NewTravelPlanView: View {
                                                 .foregroundColor(.accentColor)
                                                 .background(Color.white, in: Circle())
                                                 .frame(width: 21, height: 21)
-                                                .offset(x: 14, y: 14) // lower right overlap
+                                                .offset(x: 14, y: 14)
                                                 .shadow(color: .black.opacity(0.13), radius: 2, x: 1, y: 1)
                                         }
                                     }
                                     .buttonStyle(.plain)
                                     .padding(.trailing, 2)
-
                                 }
 
                                 // TASK FIELD
@@ -223,26 +227,39 @@ struct NewTravelPlanView: View {
             .alert("Plan name is required.", isPresented: $showNameError) {
                 Button("OK", role: .cancel) {}
             }
-        }
-        .sheet(isPresented: $showImageSourcePicker) {
-            ImageSourcePicker { sourceType in
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                    imagePickerSourceType = sourceType
-                    showFMNImagePicker = true
-                }
-            }
-        }
-        .sheet(isPresented: $showFMNImagePicker) {
-            if let source = imagePickerSourceType {
-                FMNImagePicker(sourceType: source) { img in
-                    if let img = img {
-                        imageToLift = img
-                        showImageLift = true
+            .confirmationDialog("Attach an Image", isPresented: $showImageSourceDialog, titleVisibility: .visible) {
+                Button("Take Photo") {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        activeImagePickerSheet = .camera
                     }
-                    showFMNImagePicker = false
+                }
+                Button("Choose From Gallery") {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        activeImagePickerSheet = .photoLibrary
+                    }
+                }
+                Button("Cancel", role: .cancel) { }
+            }
+
+        }
+        .onChange(of: activeImagePickerSheet) {
+            if activeImagePickerSheet == nil, imageToLift != nil {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    showImageLift = true
                 }
             }
         }
+
+
+        .sheet(item: $activeImagePickerSheet) { source in
+            FMNImagePicker(sourceType: source == .camera ? .camera : .photoLibrary) { img in
+                if let img = img {
+                    imageToLift = img
+                }
+                activeImagePickerSheet = nil
+            }
+        }
+
         .sheet(isPresented: $showImageLift) {
             if let img = imageToLift, let idx = editingTaskIndex {
                 ImageLiftView(uiImage: img) { subject in

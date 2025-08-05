@@ -6,32 +6,30 @@ struct TravelPlanDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
-    @Bindable var plan: TravelPlan
+    let plan: TravelPlan // NOT @Bindable!
+
     @Query var subjects: [SubjectImage]
 
-    // --- Fast local editing state ---
+    // --- Local Editing State ---
     @State private var isEditing = false
     @State private var planName: String = ""
     @State private var travelDate: Date = .now
     @State private var reminderDate: Date = .now
     @State private var tasks: [TravelTask] = []
 
-    // UI
-    @State private var showImageSourcePicker = false
+    // --- Image Picker Logic ---
+    @State private var showImageSourceDialog = false
+    @State private var activeImagePickerSheet: ImagePickerSheet?
     @State private var imageToLift: UIImage?
     @State private var editingTaskIndex: Int?
     @State private var showImageLift = false
     @State private var showSubjectPreview: SubjectImage?
-    @State private var imagePickerSourceType: UIImagePickerController.SourceType?
-    @State private var showFMNImagePicker = false
+    @State private var pendingImageToLift: UIImage? = nil
+
+    // --- UI & Alerts ---
     @State private var showNameError = false
     @State private var showSaveAlert = false
     @State private var showCompletedAlert = false
-
-    var allDone: Bool {
-        (isEditing ? tasks : plan.tasks).count > 0 &&
-        (isEditing ? tasks : plan.tasks).allSatisfy { $0.isCompleted }
-    }
 
     var body: some View {
         NavigationStack {
@@ -40,19 +38,14 @@ struct TravelPlanDetailView: View {
                     // PLAN DETAILS CARD
                     VStack(spacing: 20) {
                         if isEditing {
-                            TextField("Give your plan a name...", text: $planName)
-                                .padding(.vertical, 16)
-                                .padding(.horizontal, 22)
-                                .font(.system(size: 22, weight: .semibold))
-                                .background(Color(.systemGray6))
-                                .cornerRadius(16)
-                                .shadow(color: Color.black.opacity(0.03), radius: 2, y: 1)
+                            PlanTitleField()
                         } else {
                             Text(plan.name)
                                 .font(.system(size: 28, weight: .bold))
                                 .padding(.vertical, 10)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
+
 
                         VStack(alignment: .leading, spacing: 14) {
                             Text("Travel Date & Time")
@@ -133,7 +126,7 @@ struct TravelPlanDetailView: View {
                     .padding(.horizontal, 10)
 
                     // "I'm All Set" Button (only when all tasks completed and not editing)
-                    if allDone && !plan.isCompleted && !isEditing {
+                    if !isEditing && plan.tasks.count > 0 && plan.tasks.allSatisfy({ $0.isCompleted }) && !plan.isCompleted {
                         Button {
                             plan.isCompleted = true
                             NotificationHelper.cancelReminder(for: plan)
@@ -150,7 +143,7 @@ struct TravelPlanDetailView: View {
                                 .padding(.horizontal)
                                 .padding(.top, 10)
                         }
-                    } else if allDone && plan.isCompleted {
+                    } else if !isEditing && plan.tasks.count > 0 && plan.tasks.allSatisfy({ $0.isCompleted }) && plan.isCompleted {
                         Button {} label: {
                             Text("All Tasks Completed")
                                 .font(.headline)
@@ -206,43 +199,64 @@ struct TravelPlanDetailView: View {
                 Button("OK", role: .cancel) {}
             }
             .alert("Changes Saved!", isPresented: $showSaveAlert) {
-                Button("OK") { dismiss() }
+                Button("OK") { showSaveAlert = false }
             }
             .alert("You did it champ!", isPresented: $showCompletedAlert) {
                 Button("OK") { dismiss() }
             }
-            .sheet(isPresented: $showImageSourcePicker) {
-                ImageSourcePicker { sourceType in
+            .confirmationDialog("Attach an Image", isPresented: $showImageSourceDialog, titleVisibility: .visible) {
+                Button("Take Photo") {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        imagePickerSourceType = sourceType
-                        showFMNImagePicker = true
+                        activeImagePickerSheet = .camera
                     }
                 }
-            }
-            .sheet(isPresented: $showFMNImagePicker) {
-                if let source = imagePickerSourceType {
-                    FMNImagePicker(sourceType: source) { img in
-                        if let img = img {
-                            imageToLift = img
-                            showImageLift = true
-                        }
-                        showFMNImagePicker = false
+                Button("Choose From Gallery") {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        activeImagePickerSheet = .photoLibrary
                     }
                 }
+                Button("Cancel", role: .cancel) { }
             }
-            .sheet(isPresented: $showImageLift) {
-                if let img = imageToLift, let idx = editingTaskIndex {
-                    ImageLiftView(uiImage: img) { subject in
-                        handleLiftedImage(subject, forTaskAtIndex: idx)
-                    }
+        }
+        .sheet(item: $activeImagePickerSheet) { source in
+            FMNImagePicker(sourceType: source == .camera ? .camera : .photoLibrary) { img in
+                if let img = img {
+                    pendingImageToLift = img
+                }
+                activeImagePickerSheet = nil
+            }
+        }
+        .onChange(of: pendingImageToLift) { newImg in
+            if let img = newImg {
+                imageToLift = img
+                showImageLift = true
+                pendingImageToLift = nil
+            }
+        }
+        .sheet(isPresented: $showImageLift) {
+            if let img = imageToLift, let idx = editingTaskIndex {
+                ImageLiftView(uiImage: img) { subject in
+                    handleLiftedImage(subject, forTaskAtIndex: idx)
                 }
             }
-            .sheet(item: $showSubjectPreview) { subj in
-                SubjectDetailView(subject: subj)
-            }
+        }
+        .sheet(item: $showSubjectPreview) { subj in
+            SubjectDetailView(subject: subj)
         }
         .onAppear(perform: initializeEditFields)
     }
+    
+    @ViewBuilder
+    func PlanTitleField() -> some View {
+        TextField("Give your plan a name...", text: $planName)
+            .padding(.vertical, 16)
+            .padding(.horizontal, 22)
+            .font(.system(size: 22, weight: .semibold))
+            .background(Color(.systemGray6))
+            .cornerRadius(16)
+            .shadow(color: Color.black.opacity(0.03), radius: 2, y: 1)
+    }
+
 
     // MARK: - Task Row
     @ViewBuilder
@@ -262,32 +276,34 @@ struct TravelPlanDetailView: View {
             }
             .buttonStyle(.plain)
 
-            if editing {
-                TextField("What to do?", text: Binding(
-                    get: { tasks[idx].title },
-                    set: { tasks[idx].title = $0 }
-                ))
-                .padding(.vertical, 12)
-                .padding(.horizontal, 12)
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
-                .font(.system(size: 17, weight: .regular))
-            } else {
-                Text(task.title)
-                    .strikethrough(task.isCompleted)
-                    .foregroundColor(task.isCompleted ? .secondary : .primary)
-                    .font(.system(size: 17, weight: .regular))
+            Group {
+                if editing {
+                    TextField("What to do?", text: Binding(
+                        get: { tasks[idx].title },
+                        set: { tasks[idx].title = $0 }
+                    ))
                     .padding(.vertical, 12)
+                    .padding(.horizontal, 12)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
+                    .font(.system(size: 17, weight: .regular))
+                } else {
+                    Text(task.title)
+                        .strikethrough(task.isCompleted)
+                        .foregroundColor(task.isCompleted ? .secondary : .primary)
+                        .font(.system(size: 17, weight: .regular))
+                        .padding(.vertical, 12)
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
-            // SUBJECT IMAGE THUMBNAIL
             if let id = task.subjectImageID,
                let subj = subjects.first(where: { $0.id == id }),
                let thumb = subj.thumbnail {
                 Button {
                     if editing {
                         editingTaskIndex = idx
-                        showImageSourcePicker = true
+                        showImageSourceDialog = true
                     } else {
                         showSubjectPreview = subj
                     }
@@ -309,7 +325,7 @@ struct TravelPlanDetailView: View {
             } else if editing {
                 Button {
                     editingTaskIndex = idx
-                    showImageSourcePicker = true
+                    showImageSourceDialog = true
                 } label: {
                     ZStack {
                         RoundedRectangle(cornerRadius: 16)
@@ -326,14 +342,13 @@ struct TravelPlanDetailView: View {
                             .background(Color.white, in: Circle())
                             .frame(width: 21, height: 21)
                             .offset(x: 14, y: 14)
-                            .shadow(color: .black.opacity(0.13), radius: 2, x: 1, y: 1)
+                            .shadow(color: Color.black.opacity(0.13), radius: 2, x: 1, y: 1)
                     }
                 }
                 .buttonStyle(.plain)
                 .padding(.trailing, 2)
             }
 
-            // REMOVE TASK
             if editing && tasks.count > 1 {
                 Button {
                     tasks.remove(at: idx)
@@ -351,6 +366,7 @@ struct TravelPlanDetailView: View {
         .background(.ultraThinMaterial)
         .cornerRadius(18)
         .shadow(color: Color.black.opacity(0.04), radius: 2, y: 1)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Editing Logic
