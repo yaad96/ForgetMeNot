@@ -33,6 +33,9 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		C83E7E922E4054E700FD616A /* ForgetMeNot */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+				Common/DeepDeleteTravelPlan.swift = sourcecode.swift;
+			};
 			path = ForgetMeNot;
 			sourceTree = "<group>";
 		};
