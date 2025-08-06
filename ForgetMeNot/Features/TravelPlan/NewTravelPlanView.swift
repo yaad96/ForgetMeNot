@@ -24,32 +24,39 @@ extension UIImage {
     }
 }
 
-
 struct NewTravelPlanView: View {
+    init(
+        planName: String = "",
+        travelDate: Date = .now.addingTimeInterval(86400),
+        reminderDate: Date = .now.addingTimeInterval(43200),
+        tasks: [TravelTask] = [TravelTask(title: "Collect keys"), TravelTask(title: "Pack passport")],
+        onDone: @escaping (TravelPlan?) -> Void
+    ) {
+        self.onDone = onDone
+        _planName = State(initialValue: planName)
+        _travelDate = State(initialValue: travelDate)
+        _reminderDate = State(initialValue: reminderDate)
+        _tasks = State(initialValue: tasks)
+    }
+
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
     @Query var subjects: [SubjectImage]
-    
+
     @State private var showImageSourceDialog = false
     @State private var activeImagePickerSheet: ImagePickerSheet?
-
     @State private var planName: String = ""
     @State private var travelDate: Date = .now.addingTimeInterval(86400)
     @State private var reminderDate: Date = .now.addingTimeInterval(43200)
-
     @State private var tasks: [TravelTask] = [
         TravelTask(title: "Collect keys"),
         TravelTask(title: "Pack passport")
     ]
-
-    //@State private var showImageSourcePicker = false
     @State private var imageToLift: UIImage?
     @State private var editingTaskIndex: Int?
     @State private var showImageLift = false
     @State private var showSubjectPreview: SubjectImage?
-    //@State private var imagePickerSourceType: UIImagePickerController.SourceType?
-    //@State private var showFMNImagePicker = false
     @State private var showNameError = false
 
     var onDone: (TravelPlan?) -> Void
@@ -57,30 +64,23 @@ struct NewTravelPlanView: View {
     var body: some View {
         NavigationStack {
             ScrollView(.vertical, showsIndicators: false) {
-                
-                VStack(spacing: 26) {
+                VStack(spacing: 22) {
                     // PLAN DETAILS CARD
-                    VStack(spacing: 20) {
-                        TextField("Give your plan a name...", text: $planName)
-                            .padding(.vertical, 16)
-                            .padding(.horizontal, 22)
-                            .font(.system(size: 22, weight: .semibold))
-                            .background(Color(.systemGray6))
-                            .cornerRadius(16)
-                            .shadow(color: Color.black.opacity(0.03), radius: 2, y: 1)
+                    VStack(spacing: 17) {
+                        // Plan Name
+                        PlanTitleField($planName)
 
-                        VStack(alignment: .leading, spacing: 14) {
+                        VStack(alignment: .leading, spacing: 10) {
                             Text("Travel Date & Time")
-                                .font(.system(size: 17, weight: .bold))
+                                .font(.system(size: 15, weight: .semibold))
                                 .foregroundColor(.secondary)
                             DatePicker("", selection: $travelDate, displayedComponents: [.date, .hourAndMinute])
                                 .labelsHidden()
                                 .datePickerStyle(.compact)
                         }
-
-                        VStack(alignment: .leading, spacing: 14) {
+                        VStack(alignment: .leading, spacing: 10) {
                             Text("Reminder")
-                                .font(.system(size: 17, weight: .bold))
+                                .font(.system(size: 15, weight: .semibold))
                                 .foregroundColor(.secondary)
                             DatePicker("", selection: $reminderDate, in: ...travelDate, displayedComponents: [.date, .hourAndMinute])
                                 .labelsHidden()
@@ -88,23 +88,29 @@ struct NewTravelPlanView: View {
                         }
                     }
                     .padding()
-                    .background(.ultraThinMaterial)
-                    .cornerRadius(22)
-                    .shadow(color: Color.black.opacity(0.08), radius: 16, y: 6)
-                    .padding(.horizontal, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24)
+                            .stroke(Color.blue.opacity(0.08), lineWidth: 1)
+                    )
+                    .shadow(color: Color.blue.opacity(0.04), radius: 6, y: 2)
+                    .padding(.horizontal, 8)
                     .padding(.top, 8)
 
                     // TASKS CARD
-                    VStack(spacing: 18) {
+                    VStack(spacing: 13) {
                         HStack {
                             Text("Tasks")
-                                .font(.system(size: 20, weight: .bold))
+                                .font(.system(size: 16, weight: .bold))
                                 .foregroundColor(.primary)
                             Spacer()
                         }
 
                         ForEach(tasks.indices, id: \.self) { idx in
-                            HStack(alignment: .center, spacing: 12) {
+                            HStack(alignment: .center, spacing: 11) {
                                 // SUBJECT IMAGE THUMBNAIL (modern style)
                                 if let id = tasks[idx].subjectImageID,
                                    let subj = subjects.first(where: { $0.id == id }),
@@ -115,15 +121,14 @@ struct NewTravelPlanView: View {
                                         Image(uiImage: thumb)
                                             .resizable()
                                             .aspectRatio(contentMode: .fill)
-                                            .frame(width: 48, height: 48)
-                                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                            .frame(width: 40, height: 40)
+                                            .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
                                             .overlay(
-                                                RoundedRectangle(cornerRadius: 16)
-                                                    .stroke(Color.white.opacity(0.9), lineWidth: 2)
+                                                RoundedRectangle(cornerRadius: 5)
+                                                    .stroke(Color.white.opacity(0.8), lineWidth: 1.2)
                                             )
-                                            .shadow(color: Color.black.opacity(0.13), radius: 8, y: 3)
-                                            .padding(.trailing, 2)
-                                            .transition(.scale.combined(with: .opacity))
+                                            .shadow(color: Color.black.opacity(0.10), radius: 5, y: 1)
+                                            .padding(.trailing, 1)
                                     }
                                     .buttonStyle(.plain)
                                 } else {
@@ -132,37 +137,39 @@ struct NewTravelPlanView: View {
                                         showImageSourceDialog = true
                                     } label: {
                                         ZStack {
-                                            RoundedRectangle(cornerRadius: 16)
+                                            RoundedRectangle(cornerRadius: 13)
                                                 .fill(Color(.systemGray5))
-                                                .frame(width: 48, height: 48)
+                                                .frame(width: 40, height: 40)
                                             Image(systemName: "photo.on.rectangle")
                                                 .resizable()
                                                 .aspectRatio(contentMode: .fit)
-                                                .frame(width: 28, height: 28)
-                                                .foregroundColor(.blue.opacity(0.82))
+                                                .frame(width: 21, height: 21)
+                                                .foregroundColor(.blue.opacity(0.76))
                                             Image(systemName: "plus.circle.fill")
                                                 .resizable()
                                                 .foregroundColor(.accentColor)
                                                 .background(Color.white, in: Circle())
-                                                .frame(width: 21, height: 21)
-                                                .offset(x: 14, y: 14)
-                                                .shadow(color: .black.opacity(0.13), radius: 2, x: 1, y: 1)
+                                                .frame(width: 15, height: 15)
+                                                .offset(x: 10, y: 10)
+                                                .shadow(color: .black.opacity(0.10), radius: 1, x: 1, y: 1)
                                         }
                                     }
                                     .buttonStyle(.plain)
-                                    .padding(.trailing, 2)
+                                    .padding(.trailing, 1)
                                 }
 
                                 // TASK FIELD
-                                TextField("What to do?", text: Binding(
+                                TextEditor(text: Binding(
                                     get: { tasks[idx].title },
                                     set: { tasks[idx].title = $0 }
                                 ))
-                                .padding(.vertical, 12)
-                                .padding(.horizontal, 12)
-                                .background(Color(.systemGray6))
-                                .cornerRadius(12)
-                                .font(.system(size: 17, weight: .regular))
+                                .frame(minHeight: 38, maxHeight: 100)
+                                .padding(.vertical, 7)
+                                .padding(.horizontal, 10)
+                                .background(Color(.systemGray6).opacity(0.98))
+                                .cornerRadius(8)
+                                .font(.system(size: 15))
+                                .scrollContentBackground(.hidden)
 
                                 // REMOVE TASK
                                 if tasks.count > 1 {
@@ -171,57 +178,76 @@ struct NewTravelPlanView: View {
                                     } label: {
                                         Image(systemName: "minus.circle.fill")
                                             .foregroundColor(.red)
-                                            .font(.system(size: 22, weight: .semibold))
+                                            .font(.system(size: 20, weight: .semibold))
                                     }
                                     .buttonStyle(.plain)
-                                    .padding(.leading, 4)
+                                    .padding(.leading, 3)
                                 }
                             }
-                            .padding(.vertical, 4)
-                            .padding(.horizontal, 4)
+                            .padding(.vertical, 3)
+                            .padding(.horizontal, 3)
                             .background(.ultraThinMaterial)
-                            .cornerRadius(18)
-                            .shadow(color: Color.black.opacity(0.04), radius: 2, y: 1)
+                            .cornerRadius(13)
+                            .shadow(color: Color.black.opacity(0.03), radius: 2, y: 1)
                         }
 
-                        // ADD TASK BUTTON (floating style)
+                        // ADD TASK BUTTON
                         Button {
                             withAnimation(.spring()) {
                                 tasks.append(TravelTask(title: ""))
                             }
                         } label: {
-                            Label("Add Task", systemImage: "plus.circle.fill")
-                                .font(.system(size: 19, weight: .semibold))
-                                .padding(.vertical, 11)
-                                .padding(.horizontal, 18)
-                                .background(Color.accentColor.opacity(0.92))
-                                .foregroundColor(.white)
-                                .cornerRadius(14)
-                                .shadow(color: Color.accentColor.opacity(0.17), radius: 8, y: 2)
+                            HStack {
+                                Image(systemName: "plus.circle.fill")
+                                Text("Add Task")
+                            }
+                            .font(.system(size: 15, weight: .semibold))
+                            .padding(.vertical, 9)
+                            .padding(.horizontal, 18)
+                            .background(
+                                Capsule()
+                                    .fill(Color.accentColor.opacity(0.89))
+                            )
+                            .foregroundColor(.white)
+                            .shadow(color: Color.accentColor.opacity(0.14), radius: 7, y: 2)
                         }
-                        .padding(.top, 8)
                         .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, 2)
                     }
                     .padding()
-                    .background(.ultraThinMaterial)
-                    .cornerRadius(22)
-                    .shadow(color: Color.black.opacity(0.07), radius: 14, y: 4)
-                    .padding(.horizontal, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24)
+                            .stroke(Color.blue.opacity(0.07), lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(0.05), radius: 7, y: 2)
+                    .padding(.horizontal, 8)
 
-                    Spacer(minLength: 20)
+                    Spacer(minLength: 14)
                 }
-                .padding(.bottom, 32)
+                .padding(.bottom, 18)
             }
             .navigationTitle("New Travel Plan")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { savePlan() }
-                        .font(.system(size: 17, weight: .semibold))
+                        .font(.system(size: 16, weight: .semibold))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule()
+                                .fill(Color.blue.opacity(0.14))
+                        )
+                        .foregroundColor(.blue)
                 }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { cancel() }
-                        .font(.system(size: 17, weight: .regular))
+                        .font(.system(size: 15, weight: .regular))
+                        .foregroundColor(.secondary)
                 }
             }
             .alert("Plan name is required.", isPresented: $showNameError) {
@@ -240,7 +266,6 @@ struct NewTravelPlanView: View {
                 }
                 Button("Cancel", role: .cancel) { }
             }
-
         }
         .onChange(of: activeImagePickerSheet) {
             if activeImagePickerSheet == nil, imageToLift != nil {
@@ -249,8 +274,6 @@ struct NewTravelPlanView: View {
                 }
             }
         }
-
-
         .sheet(item: $activeImagePickerSheet) { source in
             FMNImagePicker(sourceType: source == .camera ? .camera : .photoLibrary) { img in
                 if let img = img {
@@ -259,7 +282,6 @@ struct NewTravelPlanView: View {
                 activeImagePickerSheet = nil
             }
         }
-
         .sheet(isPresented: $showImageLift) {
             if let img = imageToLift, let idx = editingTaskIndex {
                 ImageLiftView(uiImage: img) { subject in

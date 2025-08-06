@@ -1,3 +1,11 @@
+//
+//  NotesDetailView.swift
+//  ForgetMeNot
+//
+//  Created by Mainul Hossain on 8/5/25.
+//
+import SwiftUI
+
 struct NotesDetailView: View {
     let notes: String
     @Environment(\.dismiss) private var dismiss

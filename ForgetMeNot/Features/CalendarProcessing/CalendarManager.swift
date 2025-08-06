@@ -9,6 +9,30 @@
 import EventKit
 import Combine
 
+func isRelevantReminder(_ reminder: EKReminder) -> Bool {
+    guard let dueDate = reminder.dueDateComponents?.date else { return false }
+    let now = Date()
+    let oneMonthLater = Calendar.current.date(byAdding: .month, value: 1, to: now)!
+    
+    // Not repeating
+    if reminder.recurrenceRules == nil || reminder.recurrenceRules?.isEmpty == true {
+        return dueDate >= now && dueDate <= oneMonthLater
+    }
+    // Repeats, check first occurrence and recurrence end
+    if let rules = reminder.recurrenceRules, let rule = rules.first {
+        if let end = rule.recurrenceEnd?.endDate {
+            // Only if dueDate in window AND recurrence ends within window
+            return (dueDate >= now && dueDate <= oneMonthLater) && (end <= oneMonthLater)
+        } else {
+            // Perpetual, but only show if FIRST due is in window
+            return dueDate >= now && dueDate <= oneMonthLater
+        }
+    }
+    return false
+}
+
+
+
 class CalendarManager: ObservableObject {
     private let eventStore = EKEventStore()
     @Published var events: [EKEvent] = []
@@ -28,6 +52,8 @@ class CalendarManager: ObservableObject {
             return d1 < d2
         }
     }
+    
+    
 
     func requestAndFetchEvents() {
         loading = true
@@ -60,11 +86,9 @@ class CalendarManager: ObservableObject {
             let predicate = self.eventStore.predicateForReminders(in: nil)
             self.eventStore.fetchReminders(matching: predicate) { reminders in
                 let filtered = reminders?.filter { rem in
-                    if let dueDate = rem.dueDateComponents?.date {
-                        return dueDate >= now && dueDate <= oneMonthLater
-                    }
-                    return false
+                    isRelevantReminder(rem)
                 } ?? []
+
                 DispatchQueue.main.async {
                     self.reminders = filtered
                 }

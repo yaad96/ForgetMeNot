@@ -6,7 +6,7 @@ struct TravelPlanDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
-    let plan: TravelPlan // NOT @Bindable!
+    let plan: TravelPlan
 
     @Query var subjects: [SubjectImage]
 
@@ -34,22 +34,21 @@ struct TravelPlanDetailView: View {
     var body: some View {
         NavigationStack {
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 26) {
+                VStack(spacing: 20) {
                     // PLAN DETAILS CARD
-                    VStack(spacing: 20) {
+                    VStack(spacing: 15) {
                         if isEditing {
-                            PlanTitleField()
+                            PlanTitleField($planName)
                         } else {
                             Text(plan.name)
-                                .font(.system(size: 28, weight: .bold))
-                                .padding(.vertical, 10)
+                                .font(.system(size: 22, weight: .bold))
+                                .padding(.vertical, 8)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
 
-
-                        VStack(alignment: .leading, spacing: 14) {
+                        VStack(alignment: .leading, spacing: 8) {
                             Text("Travel Date & Time")
-                                .font(.system(size: 17, weight: .bold))
+                                .font(.system(size: 14, weight: .semibold))
                                 .foregroundColor(.secondary)
                             if isEditing {
                                 DatePicker("", selection: $travelDate, displayedComponents: [.date, .hourAndMinute])
@@ -57,14 +56,14 @@ struct TravelPlanDetailView: View {
                                     .datePickerStyle(.compact)
                             } else {
                                 Text(plan.date.formatted(date: .long, time: .shortened))
-                                    .font(.body)
+                                    .font(.callout)
                                     .foregroundColor(.primary)
                             }
                         }
 
-                        VStack(alignment: .leading, spacing: 14) {
+                        VStack(alignment: .leading, spacing: 8) {
                             Text("Reminder")
-                                .font(.system(size: 17, weight: .bold))
+                                .font(.system(size: 14, weight: .semibold))
                                 .foregroundColor(.secondary)
                             if isEditing {
                                 DatePicker("", selection: $reminderDate, in: ...travelDate, displayedComponents: [.date, .hourAndMinute])
@@ -72,23 +71,30 @@ struct TravelPlanDetailView: View {
                                     .datePickerStyle(.compact)
                             } else {
                                 Text((plan.date.addingTimeInterval(plan.reminderOffset)).formatted(date: .long, time: .shortened))
-                                    .font(.body)
+                                    .font(.callout)
                                     .foregroundColor(.primary)
                             }
                         }
                     }
-                    .padding()
-                    .background(.ultraThinMaterial)
-                    .cornerRadius(22)
-                    .shadow(color: Color.black.opacity(0.08), radius: 16, y: 6)
-                    .padding(.horizontal, 10)
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22)
+                            .stroke(Color.blue.opacity(0.10), lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(0.04), radius: 6, y: 2)
+                    .padding(.horizontal, 7)
                     .padding(.top, 8)
 
                     // TASKS CARD
-                    VStack(spacing: 18) {
+                    VStack(spacing: 11) {
                         HStack {
                             Text("Tasks")
-                                .font(.system(size: 20, weight: .bold))
+                                .font(.system(size: 16, weight: .bold))
                                 .foregroundColor(.primary)
                             Spacer()
                         }
@@ -103,16 +109,18 @@ struct TravelPlanDetailView: View {
                                 }
                             } label: {
                                 Label("Add Task", systemImage: "plus.circle.fill")
-                                    .font(.system(size: 19, weight: .semibold))
-                                    .padding(.vertical, 11)
-                                    .padding(.horizontal, 18)
-                                    .background(Color.accentColor.opacity(0.92))
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 14)
+                                    .background(
+                                        Capsule()
+                                            .fill(Color.accentColor.opacity(0.90))
+                                    )
                                     .foregroundColor(.white)
-                                    .cornerRadius(14)
-                                    .shadow(color: Color.accentColor.opacity(0.17), radius: 8, y: 2)
+                                    .shadow(color: Color.accentColor.opacity(0.11), radius: 4, y: 1)
                             }
-                            .padding(.top, 8)
                             .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.top, 3)
                         } else {
                             ForEach(plan.tasks.indices, id: \.self) { idx in
                                 taskRow(idx: idx, editing: false)
@@ -120,10 +128,16 @@ struct TravelPlanDetailView: View {
                         }
                     }
                     .padding()
-                    .background(.ultraThinMaterial)
-                    .cornerRadius(22)
-                    .shadow(color: Color.black.opacity(0.07), radius: 14, y: 4)
-                    .padding(.horizontal, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22)
+                            .stroke(Color.blue.opacity(0.07), lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(0.03), radius: 5, y: 1)
+                    .padding(.horizontal, 7)
 
                     // "I'm All Set" Button (only when all tasks completed and not editing)
                     if !isEditing && plan.tasks.count > 0 && plan.tasks.allSatisfy({ $0.isCompleted }) && !plan.isCompleted {
@@ -133,39 +147,42 @@ struct TravelPlanDetailView: View {
                             showCompletedAlert = true
                         } label: {
                             Text("I'm All Set")
-                                .font(.headline)
+                                .font(.system(size: 15, weight: .semibold))
                                 .foregroundColor(.white)
-                                .padding()
+                                .padding(.vertical, 10)
                                 .frame(maxWidth: .infinity)
-                                .background(Color.green)
-                                .cornerRadius(12)
-                                .shadow(radius: 3)
-                                .padding(.horizontal)
-                                .padding(.top, 10)
+                                .background(
+                                    Capsule()
+                                        .fill(Color.green)
+                                )
+                                .shadow(color: .green.opacity(0.08), radius: 3, y: 2)
+                                .padding(.horizontal, 20)
                         }
+                        .padding(.top, 8)
                     } else if !isEditing && plan.tasks.count > 0 && plan.tasks.allSatisfy({ $0.isCompleted }) && plan.isCompleted {
                         Button {} label: {
                             Text("All Tasks Completed")
-                                .font(.headline)
+                                .font(.system(size: 15, weight: .semibold))
                                 .foregroundColor(.white)
-                                .padding()
+                                .padding(.vertical, 10)
                                 .frame(maxWidth: .infinity)
-                                .background(Color.gray)
-                                .cornerRadius(12)
-                                .padding(.horizontal)
-                                .padding(.top, 10)
+                                .background(
+                                    Capsule()
+                                        .fill(Color.gray.opacity(0.70))
+                                )
+                                .padding(.horizontal, 20)
                         }
                         .disabled(true)
+                        .padding(.top, 8)
                     }
 
-                    Spacer(minLength: 20)
+                    Spacer(minLength: 14)
                 }
-                .padding(.bottom, 32)
+                .padding(.bottom, 18)
             }
             .navigationTitle("Plan Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // Only show edit icon if plan is not completed, and not in editing mode
                 ToolbarItem(placement: .navigationBarTrailing) {
                     if !plan.isCompleted {
                         if isEditing {
@@ -173,7 +190,7 @@ struct TravelPlanDetailView: View {
                                 saveEdits()
                             } label: {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 26, weight: .bold))
+                                    .font(.system(size: 22, weight: .bold))
                                     .foregroundColor(.green)
                             }
                         } else {
@@ -181,7 +198,7 @@ struct TravelPlanDetailView: View {
                                 enterEditMode()
                             } label: {
                                 Image(systemName: "pencil.circle")
-                                    .font(.system(size: 26, weight: .bold))
+                                    .font(.system(size: 22, weight: .bold))
                                     .foregroundColor(.blue)
                             }
                         }
@@ -192,6 +209,7 @@ struct TravelPlanDetailView: View {
                         Button("Cancel") {
                             cancelEdits()
                         }
+                        .font(.system(size: 15, weight: .regular))
                     }
                 }
             }
@@ -201,7 +219,7 @@ struct TravelPlanDetailView: View {
             .alert("Changes Saved!", isPresented: $showSaveAlert) {
                 Button("OK") { showSaveAlert = false }
             }
-            .alert("You did it champ!", isPresented: $showCompletedAlert) {
+            .alert("All Tasks Completed, Congrats!", isPresented: $showCompletedAlert) {
                 Button("OK") { dismiss() }
             }
             .confirmationDialog("Attach an Image", isPresented: $showImageSourceDialog, titleVisibility: .visible) {
@@ -246,23 +264,13 @@ struct TravelPlanDetailView: View {
         .onAppear(perform: initializeEditFields)
     }
     
-    @ViewBuilder
-    func PlanTitleField() -> some View {
-        TextField("Give your plan a name...", text: $planName)
-            .padding(.vertical, 16)
-            .padding(.horizontal, 22)
-            .font(.system(size: 22, weight: .semibold))
-            .background(Color(.systemGray6))
-            .cornerRadius(16)
-            .shadow(color: Color.black.opacity(0.03), radius: 2, y: 1)
-    }
-
+    
 
     // MARK: - Task Row
     @ViewBuilder
     func taskRow(idx: Int, editing: Bool) -> some View {
         let task = editing ? tasks[idx] : plan.tasks[idx]
-        HStack(alignment: .center, spacing: 12) {
+        HStack(alignment: .center, spacing: 10) {
             Button {
                 if editing {
                     tasks[idx].isCompleted.toggle()
@@ -271,7 +279,7 @@ struct TravelPlanDetailView: View {
                 }
             } label: {
                 Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 26, weight: .medium))
+                    .font(.system(size: 20, weight: .medium))
                     .foregroundColor(task.isCompleted ? .green : .secondary)
             }
             .buttonStyle(.plain)
@@ -282,17 +290,17 @@ struct TravelPlanDetailView: View {
                         get: { tasks[idx].title },
                         set: { tasks[idx].title = $0 }
                     ))
-                    .padding(.vertical, 12)
-                    .padding(.horizontal, 12)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(12)
-                    .font(.system(size: 17, weight: .regular))
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 10)
+                    .background(Color(.systemGray6).opacity(0.97))
+                    .cornerRadius(8)
+                    .font(.system(size: 15, weight: .regular))
                 } else {
                     Text(task.title)
                         .strikethrough(task.isCompleted)
                         .foregroundColor(task.isCompleted ? .secondary : .primary)
-                        .font(.system(size: 17, weight: .regular))
-                        .padding(.vertical, 12)
+                        .font(.system(size: 15, weight: .regular))
+                        .padding(.vertical, 8)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -311,15 +319,14 @@ struct TravelPlanDetailView: View {
                     Image(uiImage: thumb)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .frame(width: 48, height: 48)
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .frame(width: 38, height: 38)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(Color.white.opacity(0.9), lineWidth: 2)
+                            RoundedRectangle(cornerRadius: 5)
+                                .stroke(Color.white.opacity(0.8), lineWidth: 1.1)
                         )
-                        .shadow(color: Color.black.opacity(0.13), radius: 8, y: 3)
-                        .padding(.trailing, 2)
-                        .transition(.scale.combined(with: .opacity))
+                        .shadow(color: Color.black.opacity(0.07), radius: 5, y: 1)
+                        .padding(.trailing, 1)
                 }
                 .buttonStyle(.plain)
             } else if editing {
@@ -328,25 +335,25 @@ struct TravelPlanDetailView: View {
                     showImageSourceDialog = true
                 } label: {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 16)
+                        RoundedRectangle(cornerRadius: 12)
                             .fill(Color(.systemGray5))
-                            .frame(width: 48, height: 48)
+                            .frame(width: 38, height: 38)
                         Image(systemName: "photo.on.rectangle")
                             .resizable()
                             .aspectRatio(contentMode: .fit)
-                            .frame(width: 28, height: 28)
-                            .foregroundColor(.blue.opacity(0.82))
+                            .frame(width: 15, height: 15)
+                            .foregroundColor(.blue.opacity(0.75))
                         Image(systemName: "plus.circle.fill")
                             .resizable()
                             .foregroundColor(.accentColor)
                             .background(Color.white, in: Circle())
-                            .frame(width: 21, height: 21)
-                            .offset(x: 14, y: 14)
-                            .shadow(color: Color.black.opacity(0.13), radius: 2, x: 1, y: 1)
+                            .frame(width: 13, height: 13)
+                            .offset(x: 8, y: 8)
+                            .shadow(color: .black.opacity(0.10), radius: 1, x: 1, y: 1)
                     }
                 }
                 .buttonStyle(.plain)
-                .padding(.trailing, 2)
+                .padding(.trailing, 1)
             }
 
             if editing && tasks.count > 1 {
@@ -355,17 +362,17 @@ struct TravelPlanDetailView: View {
                 } label: {
                     Image(systemName: "minus.circle.fill")
                         .foregroundColor(.red)
-                        .font(.system(size: 22, weight: .semibold))
+                        .font(.system(size: 19, weight: .semibold))
                 }
                 .buttonStyle(.plain)
-                .padding(.leading, 4)
+                .padding(.leading, 3)
             }
         }
-        .padding(.vertical, 4)
-        .padding(.horizontal, 4)
+        .padding(.vertical, 3)
+        .padding(.horizontal, 3)
         .background(.ultraThinMaterial)
-        .cornerRadius(18)
-        .shadow(color: Color.black.opacity(0.04), radius: 2, y: 1)
+        .cornerRadius(8)
+        .shadow(color: Color.black.opacity(0.02), radius: 2, y: 1)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
