@@ -152,7 +152,7 @@ struct ContentView: View {
                                     }, onDelete: {
                                         modelContext.delete(plan)
                                     })
-                                    .opacity(0.7)
+                                    
                                 }
                             }
                             .padding(.horizontal, 14)
