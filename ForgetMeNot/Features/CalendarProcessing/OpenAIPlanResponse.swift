@@ -21,7 +21,7 @@ func fetchPlanSuggestionOpenAI(
     eventDescription: String?,
     completion: @escaping (OpenAIPlanResponse?) -> Void // <--- Note type here!
 ) {
-    let apiKey = "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"
+    let apiKey = APIKeyLoader.openAIKey
     let url = URL(string: "https://api.openai.com/v1/chat/completions")!
     let formatter = ISO8601DateFormatter()
     let dateString = formatter.string(from: eventDate)
