@@ -127,11 +127,14 @@ struct ContentView: View {
                                 .padding(.leading, 8)
                             VStack(spacing: 14) {
                                 ForEach(incompletePlans) { plan in
-                                    PlanCard(plan: plan, isCompleted: false, onTap: {
+                                    PlanCard(
+                                        plan: plan,
+                                        isCompleted: false,
+                                        onTap: {
                                         selectedPlan = plan
-                                    }, onDelete: {
-                                        modelContext.delete(plan)
-                                    })
+                                        },
+                                        onDelete: { deepDeleteTravelPlan(plan, modelContext: modelContext) }
+                                    )
                                 }
 
                                 
@@ -147,11 +150,14 @@ struct ContentView: View {
                                 .padding(.leading, 8)
                             VStack(spacing: 14) {
                                 ForEach(completedPlans) { plan in
-                                    PlanCard(plan: plan, isCompleted: true, onTap: {
+                                    PlanCard(
+                                        plan: plan,
+                                        isCompleted: true,
+                                        onTap: {
                                         selectedPlan = plan
-                                    }, onDelete: {
-                                        modelContext.delete(plan)
-                                    })
+                                        },
+                                        onDelete: { deepDeleteTravelPlan(plan, modelContext: modelContext) }
+                                    )
                                     
                                 }
                             }
