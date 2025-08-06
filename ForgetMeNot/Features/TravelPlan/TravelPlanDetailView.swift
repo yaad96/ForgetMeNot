@@ -197,7 +197,7 @@ struct TravelPlanDetailView: View {
                             Button {
                                 enterEditMode()
                             } label: {
-                                Image(systemName: "pencil.circle")
+                                Image(systemName: "square.and.pencil")
                                     .font(.system(size: 22, weight: .bold))
                                     .foregroundColor(.blue)
                             }
@@ -369,7 +369,7 @@ struct TravelPlanDetailView: View {
             }
         }
         .padding(.vertical, 3)
-        .padding(.horizontal, 3)
+        .padding(.horizontal, 10)
         .background(.ultraThinMaterial)
         .cornerRadius(8)
         .shadow(color: Color.black.opacity(0.02), radius: 2, y: 1)
@@ -406,7 +406,7 @@ struct TravelPlanDetailView: View {
         NotificationHelper.cancelReminder(for: plan)
         NotificationHelper.scheduleTravelReminder(for: plan, offset: plan.reminderOffset)
         isEditing = false
-        showSaveAlert = true
+        //showSaveAlert = true
     }
 
     private func cancelEdits() {

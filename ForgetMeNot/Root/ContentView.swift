@@ -206,36 +206,32 @@ struct PlanCard: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            Button(action: onTap) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(isCompleted ? Color.green.opacity(0.08) : Color.blue.opacity(0.06))
-                        .frame(width: 42, height: 42)
-                    Image(systemName: isCompleted ? "checkmark.circle.fill" : "airplane.departure")
-                        .font(.system(size: 19, weight: .semibold))
-                        .foregroundColor(isCompleted ? .green : .blue)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(plan.name)
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.primary)
-                        .lineLimit(1)
-                    HStack(spacing: 7) {
-                        Image(systemName: "calendar")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.secondary)
-                        Text(plan.date, style: .date)
-                            .font(.system(size: 13, weight: .regular))
-                            .foregroundColor(.secondary)
-                    }
-                }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .foregroundColor(.gray.opacity(0.6))
-                    .font(.system(size: 14, weight: .semibold))
+            ZStack {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(isCompleted ? Color.green.opacity(0.08) : Color.blue.opacity(0.06))
+                    .frame(width: 42, height: 42)
+                Image(systemName: isCompleted ? "checkmark.circle.fill" : "hourglass.bottomhalf.filled")
+                    .font(.system(size: 19, weight: .semibold))
+                    .foregroundColor(isCompleted ? .green : .blue)
             }
-            .buttonStyle(.plain)
-
+            VStack(alignment: .leading, spacing: 2) {
+                Text(plan.name)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                HStack(spacing: 7) {
+                    Image(systemName: "calendar")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.secondary)
+                    Text(plan.date, style: .date)
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundColor(.secondary)
+                }
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .foregroundColor(.gray.opacity(0.6))
+                .font(.system(size: 14, weight: .semibold))
             Button(action: onDelete) {
                 Image(systemName: "trash")
                     .foregroundColor(.red.opacity(0.75))
@@ -249,6 +245,9 @@ struct PlanCard: View {
         .background(.thinMaterial)
         .cornerRadius(8)
         .shadow(color: .black.opacity(0.03), radius: 4, y: 1)
+        .contentShape(Rectangle()) // Makes entire HStack tappable (excluding transparent padding)
+        .onTapGesture {
+            onTap()
+        }
     }
 }
-
