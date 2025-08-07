@@ -1,109 +1,97 @@
 import SwiftUI
 import SwiftData
 
-struct ContentView: View {
-    
+// --- Path Destination Enum ---
+enum AppNav: Hashable {
+    case newPlan
+    case allUpcoming
+    case planDetail(TravelPlan)
+}
 
+struct ContentView: View {
     @Query(sort: \TravelPlan.date, order: .forward) var plans: [TravelPlan]
     @Environment(\.modelContext) private var modelContext
 
-    @State private var showNewPlan = false
-    @State private var selectedPlan: TravelPlan?
-    
-    @State private var showAllUpcoming = false
-
+    @State private var navPath = NavigationPath()
+    @State private var planToOpen: TravelPlan?
+    @State private var newPlanParams: (planName: String?, travelDate: Date?, reminderDate: Date?, tasks: [TravelTask]?) = (nil, nil, nil, nil)
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navPath) {
             ScrollView {
                 VStack(spacing: 0) {
                     // Header Card
                     VStack(spacing: 4) {
-                        
-
-                            Text("🧳ForgetMeNot")
-                                .font(.system(size: 28, weight: .bold, design: .monospaced))
-                                .foregroundColor(.accentColor)
-                                .shadow(color: .accentColor.opacity(0.04), radius: 2, y: 1)
-                                .padding(.bottom, 2)
-                            Text("Let your iPhone remember important details!")
-                                .foregroundColor(.secondary)
-                                .font(.system(size: 14, weight: .medium, design: .monospaced))
-                                .multilineTextAlignment(.center)
-                        }
-                        .padding(.vertical, 18)
-                        .padding(.horizontal, 12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(Color(.systemBackground).opacity(0.72))
-                                .shadow(color: .accentColor.opacity(0.09), radius: 5, y: 2)
-                        )
-                        .padding(.horizontal, 14)
-                        .padding(.top, 22)
-
-                        // Sleek Modern Buttons
-                        HStack(spacing: 10) {
-                            Button {
-                                showNewPlan = true
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "plus.circle.fill")
-                                    Text("New Plan")
-                                }
-                                .font(.system(size: 16, weight: .semibold))
-                                .padding(.vertical, 10)
-                                .padding(.horizontal, 18)
-                                .background(
-                                    Capsule()
-                                        .fill(
-                                            LinearGradient(
-                                                colors: [Color.accentColor.opacity(0.15), Color.blue.opacity(0.12)],
-                                                startPoint: .topLeading, endPoint: .bottomTrailing
-                                            )
-                                        )
-                                )
-                            }
+                        Text("🧳ForgetMeNot")
+                            .font(.system(size: 28, weight: .bold, design: .monospaced))
                             .foregroundColor(.accentColor)
-                            .buttonStyle(.plain)
-                            .sheet(isPresented: $showNewPlan) {
-                                NewTravelPlanView { newPlan in
-                                    if let plan = newPlan { selectedPlan = plan }
-                                    showNewPlan = false
-                                }
-                            }
+                            .shadow(color: .accentColor.opacity(0.04), radius: 2, y: 1)
+                            .padding(.bottom, 2)
+                        Text("Let your iPhone remember important details!")
+                            .foregroundColor(.secondary)
+                            .font(.system(size: 14, weight: .medium, design: .monospaced))
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.vertical, 18)
+                    .padding(.horizontal, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(Color(.systemBackground).opacity(0.72))
+                            .shadow(color: .accentColor.opacity(0.09), radius: 5, y: 2)
+                    )
+                    .padding(.horizontal, 14)
+                    .padding(.top, 22)
 
-                            Button {
-                                showAllUpcoming = true
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "rectangle.stack")
-                                    Text("From Calendar")
-                                }
-                                .font(.system(size: 16, weight: .semibold))
-                                .padding(.vertical, 10)
-                                .padding(.horizontal, 18)
-                                .background(
-                                    Capsule()
-                                        .fill(
-                                            LinearGradient(
-                                                colors: [Color.blue.opacity(0.14), Color.accentColor.opacity(0.13)],
-                                                startPoint: .topLeading, endPoint: .bottomTrailing
-                                            )
+                    // Sleek Modern Buttons
+                    HStack(spacing: 10) {
+                        Button {
+                            navPath.append(AppNav.newPlan)
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "plus.circle.fill")
+                                Text("New Plan")
+                            }
+                            .font(.system(size: 16, weight: .semibold))
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 18)
+                            .background(
+                                Capsule()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [Color.accentColor.opacity(0.15), Color.blue.opacity(0.12)],
+                                            startPoint: .topLeading, endPoint: .bottomTrailing
                                         )
-                                )
-                            }
-                            .foregroundColor(.accentColor)
-                            .buttonStyle(.plain)
-                            .sheet(isPresented: $showAllUpcoming) {
-                                NavigationStack {
-                                    AllUpcomingView(calendarManager: CalendarManager())
-                                }
-                            }
+                                    )
+                            )
                         }
-                        .padding(.top, 4)
-                        .padding(.horizontal, 18)
+                        .foregroundColor(.accentColor)
+                        .buttonStyle(.plain)
 
-
+                        Button {
+                            navPath.append(AppNav.allUpcoming)
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "rectangle.stack")
+                                Text("From Calendar")
+                            }
+                            .font(.system(size: 16, weight: .semibold))
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 18)
+                            .background(
+                                Capsule()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [Color.blue.opacity(0.14), Color.accentColor.opacity(0.13)],
+                                            startPoint: .topLeading, endPoint: .bottomTrailing
+                                        )
+                                    )
+                            )
+                        }
+                        .foregroundColor(.accentColor)
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.top, 4)
+                    .padding(.horizontal, 18)
 
                     // Sections
                     let incompletePlans = plans.filter { !$0.isCompleted }
@@ -131,14 +119,11 @@ struct ContentView: View {
                                         plan: plan,
                                         isCompleted: false,
                                         onTap: {
-                                        selectedPlan = plan
+                                            navPath.append(AppNav.planDetail(plan))
                                         },
                                         onDelete: { deepDeleteTravelPlan(plan, modelContext: modelContext) }
                                     )
                                 }
-
-                                
-
                             }
                             .padding(.horizontal, 14)
                         }
@@ -154,11 +139,10 @@ struct ContentView: View {
                                         plan: plan,
                                         isCompleted: true,
                                         onTap: {
-                                        selectedPlan = plan
+                                            navPath.append(AppNav.planDetail(plan))
                                         },
                                         onDelete: { deepDeleteTravelPlan(plan, modelContext: modelContext) }
                                     )
-                                    
                                 }
                             }
                             .padding(.horizontal, 14)
@@ -170,12 +154,31 @@ struct ContentView: View {
                 }
             }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
-            .navigationDestination(item: $selectedPlan) { plan in
-                TravelPlanDetailView(plan: plan)
+            .navigationDestination(for: AppNav.self) { destination in
+                switch destination {
+                case .newPlan:
+                    NewTravelPlanView { newPlan in
+                        if let plan = newPlan {
+                            navPath.removeLast(navPath.count)      // Pop all the way home
+                            navPath.append(AppNav.planDetail(plan)) // Show plan details
+                        } else {
+                            navPath.removeLast(navPath.count)      // Pop all the way home if cancelled
+                        }
+                    }
+
+                case .allUpcoming:
+                    AllUpcomingView(
+                        calendarManager: CalendarManager(),
+                        navPath: $navPath // pass binding!
+                    )
+                case .planDetail(let plan):
+                    TravelPlanDetailView(plan: plan)
+                }
             }
         }
     }
 }
+
 
 // MARK: - Section Header
 struct SectionHeader: View {

@@ -4,8 +4,9 @@ struct AllUpcomingView: View {
     @Environment(\.dismiss) private var dismissSheet
 
     @ObservedObject var calendarManager: CalendarManager
+    @Binding var navPath: NavigationPath
 
-    @State private var showNewPlanSheet = false
+    @State private var isNewPlanActive = false
     @State private var pendingPlanName: String = ""
     @State private var pendingTravelDate: Date = .now
     @State private var pendingReminderDate: Date = .now
@@ -41,14 +42,30 @@ struct AllUpcomingView: View {
                                             pendingPlanName = item.title
                                             pendingTravelDate = item.date ?? .now
                                             pendingReminderDate = item.date ?? .now
-                                            pendingTasks = []
+                                            pendingTasks = [
+                                                TravelTask(title: "Task A"),
+                                                TravelTask(title: "Task B")
+                                            ]
+
                                         }
-                                        showNewPlanSheet = true
+                                        isNewPlanActive = true
                                     }
                                 }
                             },
                             onShowDetails: {
                                 notesToShow = item.notes ?? ""
+                            },
+                            onCreateBlank: {
+                                            // Generate "Plan Yourself"
+                                            pendingPlanName = item.title
+                                            pendingTravelDate = item.date ?? .now
+                                            pendingReminderDate = item.date ?? .now
+                                            pendingTasks = [
+                                                TravelTask(title: "Task A"),
+                                                TravelTask(title: "Task B")
+                                            ]
+
+                                            isNewPlanActive = true // << navigation push!
                             }
                         )
                     }
@@ -69,17 +86,23 @@ struct AllUpcomingView: View {
                     .shadow(radius: 10)
             }
         }
-        .sheet(isPresented: $showNewPlanSheet) {
+        .navigationDestination(isPresented: $isNewPlanActive) {
             NewTravelPlanView(
                 planName: pendingPlanName,
                 travelDate: pendingTravelDate,
                 reminderDate: pendingReminderDate,
                 tasks: pendingTasks
-            ) { _ in
-                showNewPlanSheet = false
-                dismissSheet()
+            ) { newPlan in
+                if let plan = newPlan {
+                    navPath.removeLast(navPath.count) // Pop to home
+                    navPath.append(AppNav.planDetail(plan)) // Show plan details
+                } else {
+                    navPath.removeLast(navPath.count) // Pop to home if cancelled
+                }
             }
         }
+
+        
         .sheet(isPresented: Binding<Bool>(
             get: { !notesToShow.isEmpty },
             set: { newValue in
@@ -101,6 +124,7 @@ struct EventCard: View {
     let item: UpcomingItem
     var onCreatePlan: () -> Void
     var onShowDetails: () -> Void
+    var onCreateBlank: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -165,6 +189,22 @@ struct EventCard: View {
             }
             .foregroundColor(.blue)
             .buttonStyle(.plain)
+            
+            Button(action: onCreateBlank) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "wand.and.stars")
+                                Text("Generate Plan Yourself")
+                            }
+                            .font(.system(size: 14, weight: .semibold))
+                            .padding(.vertical, 7)
+                            .padding(.horizontal, 16)
+                            .background(
+                                Capsule()
+                                    .fill(Color.orange.opacity(0.13))
+                            )
+                        }
+                        .foregroundColor(.orange)
+                        .buttonStyle(.plain)
         }
         .padding(14)
         .background(

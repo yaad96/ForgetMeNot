@@ -32,7 +32,7 @@ struct TravelPlanDetailView: View {
     @State private var showCompletedAlert = false
 
     var body: some View {
-        NavigationStack {
+
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 20) {
                     // PLAN DETAILS CARD
@@ -183,36 +183,36 @@ struct TravelPlanDetailView: View {
             .navigationTitle("Plan Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    if !plan.isCompleted {
-                        if isEditing {
-                            Button {
-                                saveEdits()
-                            } label: {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 22, weight: .bold))
-                                    .foregroundColor(.green)
-                            }
-                        } else {
-                            Button {
-                                enterEditMode()
-                            } label: {
-                                Image(systemName: "square.and.pencil")
-                                    .font(.system(size: 22, weight: .bold))
-                                    .foregroundColor(.blue)
-                            }
-                        }
-                    }
-                }
-                ToolbarItem(placement: .navigationBarLeading) {
-                    if isEditing {
-                        Button("Cancel") {
+                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    if !plan.isCompleted && isEditing {
+                        // Cancel (cross)
+                        Button {
                             cancelEdits()
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 22, weight: .bold))
+                                .foregroundColor(.red)
                         }
-                        .font(.system(size: 15, weight: .regular))
+                        // Save (check)
+                        Button {
+                            saveEdits()
+                        } label: {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 22, weight: .bold))
+                                .foregroundColor(.green)
+                        }
+                    } else if !plan.isCompleted && !isEditing {
+                        Button {
+                            enterEditMode()
+                        } label: {
+                            Image(systemName: "square.and.pencil")
+                                .font(.system(size: 22, weight: .bold))
+                                .foregroundColor(.blue)
+                        }
                     }
                 }
             }
+
             .alert("Plan name is required.", isPresented: $showNameError) {
                 Button("OK", role: .cancel) {}
             }
@@ -235,7 +235,7 @@ struct TravelPlanDetailView: View {
                 }
                 Button("Cancel", role: .cancel) { }
             }
-        }
+        
         .sheet(item: $activeImagePickerSheet) { source in
             FMNImagePicker(sourceType: source == .camera ? .camera : .photoLibrary) { img in
                 if let img = img {
