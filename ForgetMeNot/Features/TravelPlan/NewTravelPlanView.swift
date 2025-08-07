@@ -62,7 +62,7 @@ struct NewTravelPlanView: View {
     var onDone: (TravelPlan?) -> Void
 
     var body: some View {
-        NavigationStack {
+    
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 22) {
                     // PLAN DETAILS CARD
@@ -244,11 +244,7 @@ struct NewTravelPlanView: View {
                         )
                         .foregroundColor(.blue)
                 }
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { cancel() }
-                        .font(.system(size: 15, weight: .regular))
-                        .foregroundColor(.secondary)
-                }
+                
             }
             .alert("Plan name is required.", isPresented: $showNameError) {
                 Button("OK", role: .cancel) {}
@@ -266,7 +262,7 @@ struct NewTravelPlanView: View {
                 }
                 Button("Cancel", role: .cancel) { }
             }
-        }
+        
         .onChange(of: activeImagePickerSheet) {
             if activeImagePickerSheet == nil, imageToLift != nil {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -310,7 +306,7 @@ struct NewTravelPlanView: View {
         modelContext.insert(plan)
         NotificationHelper.scheduleTravelReminder(for: plan, offset: reminderOffset)
         onDone(plan)
-        dismiss()
+        
     }
 
     private func cancel() {

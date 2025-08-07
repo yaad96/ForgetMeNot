@@ -12,7 +12,7 @@ struct NotesDetailView: View {
     @State private var isLoading = true
 
     var body: some View {
-        NavigationStack {
+        
             ZStack {
                 ScrollView {
                     Text(notes)
@@ -44,6 +44,6 @@ struct NotesDetailView: View {
                     isLoading = false
                 }
             }
-        }
+        
     }
 }
