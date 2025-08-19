@@ -30,6 +30,8 @@
     <string>This app needs access to your calendar to suggest travel tasks.</string>
     <key>NSRemindersUsageDescription</key>
     <string>This app needs access to your Reminders to help you plan better.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>ForgetMeNot needs microphone access to capture your voice for Talk-to-Plan.</string>
 </dict>
 </plist>
 
