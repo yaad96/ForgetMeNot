@@ -1,0 +1,69 @@
+//
+//  ConfirmTranscriptSheet.swift
+//  ForgetMeNot
+//
+//  Created by Mainul Hossain on 8/19/25.
+//
+
+
+import SwiftUI
+
+struct ConfirmTranscriptSheet: View {
+    @Binding var text: String
+    let onUse: () -> Void
+    let onCancel: () -> Void
+    @FocusState private var focus: Bool
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 12) {
+                ZStack(alignment: .topLeading) {
+                    TextEditor(text: $text)
+                        .focused($focus)
+                        .textInputAutocapitalization(.sentences)
+                        .autocorrectionDisabled(false)
+                        .padding(10)
+                        .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial))
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.15), lineWidth: 1))
+                        .frame(minHeight: 240)
+                    if text.isEmpty {
+                        Text("Edit transcript here...")
+                            .foregroundColor(.secondary)
+                            .padding(.top, 16).padding(.leading, 16)
+                            .allowsHitTesting(false)
+                    }
+                }
+                HStack {
+                    Button("Cancel") { onCancel() }.foregroundColor(.secondary)
+                    Spacer()
+                    Button(action: {
+                        // Hide the keyboard + its toolbar before we dismiss/navigate
+                        focus = false
+                        onUse()
+                    }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "sparkles")
+                            Text("Generate Smart Travel Plan")
+                        }
+                        .font(.system(size: 14, weight: .semibold))
+                        .padding(.vertical, 7)
+                        .padding(.horizontal, 16)
+                        .background(
+                            Capsule().fill(Color.blue.opacity(0.13))
+                        )
+                    }
+                    .foregroundColor(.blue)
+                    .buttonStyle(.plain)
+
+                }
+                .padding(.top, 8)
+            }
+            .padding()
+            .navigationTitle("Confirm Transcript")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Done") { focus = false } } }
+            .onAppear { DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { focus = true } }
+        }
+        .presentationDetents([.medium, .large])
+    }
+}
