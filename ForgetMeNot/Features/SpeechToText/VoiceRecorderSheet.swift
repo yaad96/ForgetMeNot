@@ -16,6 +16,9 @@ struct VoiceRecorderSheet: View {
     let onCancel: () -> Void
 
     @StateObject private var recorder = VoiceRecorder()
+    
+    
+
 
     var body: some View {
         VStack(spacing: 20) {
@@ -31,7 +34,12 @@ struct VoiceRecorderSheet: View {
                 .padding(.horizontal, 16)
 
             Button(action: {
-                recorder.isRecording ? recorder.stop() : (try? recorder.start())
+                switch recorder.state {
+                case .recording:
+                    recorder.pause()
+                case .paused, .idle:
+                    try? recorder.start()
+                }
             }) {
                 ZStack {
                     Circle()
@@ -39,12 +47,17 @@ struct VoiceRecorderSheet: View {
                         .frame(width: 120, height: 120)
                         .scaleEffect(recorder.isRecording ? 1.06 : 1.0)
                         .animation(recorder.isRecording ? .easeInOut(duration: 0.8).repeatForever(autoreverses: true) : .default, value: recorder.isRecording)
-                    Image(systemName: recorder.isRecording ? "stop.fill" : "mic.fill")
-                        .font(.system(size: 36, weight: .bold))
-                        .foregroundColor(recorder.isRecording ? .red : .accentColor)
+
+                    Image(systemName:
+                        recorder.isRecording ? "pause.fill" :    // show pause while recording
+                        (recorder.isPaused ? "play.fill" : "mic.fill") // play to resume, mic for first start
+                    )
+                    .font(.system(size: 36, weight: .bold))
+                    .foregroundColor(recorder.isRecording ? .red : .accentColor)
                 }
             }
             .buttonStyle(.plain)
+
 
             HStack {
                 Button("Cancel") {
@@ -98,7 +111,7 @@ struct WaveformView: View {
 
 @MainActor
 final class VoiceRecorder: ObservableObject {
-    @Published var isRecording = false
+    //@Published var isRecording = false
     @Published var levels: [CGFloat] = []
     @Published var elapsed: TimeInterval = 0
 
@@ -112,66 +125,102 @@ final class VoiceRecorder: ObservableObject {
     private let targetFormat = AVAudioFormat(standardFormatWithSampleRate: 16_000, channels: 1)!
     private let bufferSize: AVAudioFrameCount = 2048
     private let maxBars = 60
+    
+    enum RecordingState { case idle, recording, paused }
+
+    @Published var state: RecordingState = .idle
+    var isRecording: Bool { state == .recording }
+    var isPaused: Bool { state == .paused }
+
+    // Keep the HW format and elapsed across pauses
+    private var inputFormat: AVAudioFormat?
+    private var elapsedAccum: TimeInterval = 0
 
     var hasAudio: Bool { framesWritten > 0 }
     var formattedElapsed: String {
-        let s = Int(elapsed); return String(format: "%02d:%02d", s/60, s%60)
+        let s = Int(elapsed)
+        return String(format: "%02d:%02d", s/60, s%60)
     }
 
-    func start() throws {
-        guard !isRecording else { return }
 
+    func start() throws {
+        // Resume if paused; create new file only if idle
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.record, mode: .measurement, options: [.duckOthers])
         try session.setActive(true)
 
         let input = engine.inputNode
-        let inputFormat = input.outputFormat(forBus: 0) // <- use the HW format (48 kHz in your log)
+        let format = input.outputFormat(forBus: 0)
+        if inputFormat == nil { inputFormat = format }
 
-        // Create WAV file that matches the input format
-        let tmp = FileManager.default.temporaryDirectory
-        fileURL = tmp.appendingPathComponent(UUID().uuidString).appendingPathExtension("wav")
-        file = try AVAudioFile(forWriting: fileURL!, settings: inputFormat.settings)
-
-        // IMPORTANT: install tap with the same format as the node (or pass nil)
-        input.removeTap(onBus: 0)
-        // fix
-        input.installTap(onBus: 0, bufferSize: 2048, format: inputFormat) { [weak self] buffer, _ in
-            guard let self = self else { return }
-            self.write(buffer: buffer)          // <-- increments framesWritten
-            self.captureLevel(buffer: buffer)
+        if state == .idle || file == nil || fileURL == nil {
+            // fresh recording
+            let tmp = FileManager.default.temporaryDirectory
+            fileURL = tmp.appendingPathComponent(UUID().uuidString).appendingPathExtension("wav")
+            file = try AVAudioFile(forWriting: fileURL!, settings: format.settings)
+            framesWritten = 0
+            elapsedAccum = 0
+            levels.removeAll()
         }
 
+        input.removeTap(onBus: 0)
+        input.installTap(onBus: 0, bufferSize: bufferSize, format: format) { [weak self] buffer, _ in
+            guard let self = self else { return }
+            self.write(buffer: buffer)          // increments framesWritten
+            self.captureLevel(buffer: buffer)
+        }
 
         engine.prepare()
         try engine.start()
 
-        framesWritten = 0
         startDate = Date()
-        elapsed = 0
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] _ in
-            guard let self, let start = self.startDate else { return }
-            self.elapsed = Date().timeIntervalSince(start)
+            guard let self else { return }
+            let base = self.elapsedAccum
+            let nowPart = self.startDate.map { Date().timeIntervalSince($0) } ?? 0
+            self.elapsed = base + nowPart
         }
-        isRecording = true
+
+        state = .recording
     }
+    
+    func pause() {
+        guard state == .recording else { return }
+        engine.inputNode.removeTap(onBus: 0)
+        engine.stop()
+        if let start = startDate { elapsedAccum += Date().timeIntervalSince(start) }
+        timer?.invalidate(); timer = nil
+        startDate = nil
+        state = .paused
+    }
+
+
 
 
     func stop() {
-        guard isRecording else { return }
+        guard state != .idle else { return }
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
+        if let start = startDate { elapsedAccum += Date().timeIntervalSince(start) }
         timer?.invalidate(); timer = nil
-        isRecording = false
+        startDate = nil
+        state = .idle
         try? AVAudioSession.sharedInstance().setActive(false)
     }
+
 
     func cancelAndDelete() {
         stop()
         if let url = fileURL { try? FileManager.default.removeItem(at: url) }
-        file = nil; fileURL = nil; framesWritten = 0; levels.removeAll(); elapsed = 0
+        file = nil; fileURL = nil
+        framesWritten = 0
+        levels.removeAll()
+        elapsed = 0
+        elapsedAccum = 0
+        state = .idle
     }
+
 
     private func write(buffer: AVAudioPCMBuffer) {
         do { try file?.write(from: buffer); framesWritten += AVAudioFramePosition(buffer.frameLength) }
