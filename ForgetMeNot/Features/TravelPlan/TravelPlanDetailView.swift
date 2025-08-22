@@ -31,211 +31,279 @@ struct TravelPlanDetailView: View {
     @State private var showSaveAlert = false
     @State private var showCompletedAlert = false
 
+    // --- Voice-to-Task (editing) ---
+    @State private var showTaskVoiceSheet = false
+    @State private var isTaskTranscribing = false
+    @State private var showConfirmTaskTranscript = false
+    @State private var taskTranscript: String = ""
+    @State private var lastTaskRecordingURL: URL?
+    @State private var showMicDeniedAlert = false
+    @State private var voiceError: String?
+
+    private let mic = MicPermissionService()
+    private let stt = OpenAITranscriptionService(apiKey: APIKeyLoader.openAIKey)
+
+    // MARK: - Tiny helpers to keep the type checker happy
+
+    @ViewBuilder
+    private func TravelDateEditingSection() -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Travel Date & Time")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.secondary)
+            DatePicker(
+                "",
+                selection: $travelDate,
+                displayedComponents: [.date, .hourAndMinute]
+            )
+            .labelsHidden()
+            .datePickerStyle(.compact)
+        }
+    }
+
+    @ViewBuilder
+    private func TravelDateDisplaySection() -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Travel Date & Time")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.secondary)
+            let d = plan.date
+            Text(d.formatted(date: .long, time: .shortened))
+                .font(.callout)
+                .foregroundColor(.primary)
+        }
+    }
+
+    @ViewBuilder
+    private func ReminderEditingSection(upper: Date) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Reminder")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.secondary)
+            DatePicker(
+                "",
+                selection: $reminderDate,
+                in: ...upper,
+                displayedComponents: [.date, .hourAndMinute]
+            )
+            .labelsHidden()
+            .datePickerStyle(.compact)
+        }
+    }
+
+    @ViewBuilder
+    private func ReminderDisplaySection() -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Reminder")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.secondary)
+            let reminderMoment = plan.date.addingTimeInterval(plan.reminderOffset)
+            Text(reminderMoment.formatted(date: .long, time: .shortened))
+                .font(.callout)
+                .foregroundColor(.primary)
+        }
+    }
+
+    // MARK: - Body
+
     var body: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 20) {
+                // PLAN DETAILS CARD
+                VStack(spacing: 15) {
+                    if isEditing {
+                        PlanTitleField($planName)
+                    } else {
+                        let name = plan.name
+                        Text(name)
+                            .font(.system(size: 22, weight: .bold))
+                            .padding(.vertical, 8)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
 
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 20) {
-                    // PLAN DETAILS CARD
-                    VStack(spacing: 15) {
+                    // Precompute sections with type erasure to calm the compiler
+                    let travelDateSection: AnyView = {
                         if isEditing {
-                            PlanTitleField($planName)
+                            return AnyView(TravelDateEditingSection())
                         } else {
-                            Text(plan.name)
-                                .font(.system(size: 22, weight: .bold))
+                            return AnyView(TravelDateDisplaySection())
+                        }
+                    }()
+
+                    let reminderSection: AnyView = {
+                        if isEditing {
+                            let upper = travelDate
+                            return AnyView(ReminderEditingSection(upper: upper))
+                        } else {
+                            return AnyView(ReminderDisplaySection())
+                        }
+                    }()
+
+                    travelDateSection
+                    reminderSection
+                }
+                .padding(.vertical, 10)
+                .padding(.horizontal, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22)
+                        .stroke(Color.blue.opacity(0.10), lineWidth: 1)
+                )
+                .shadow(color: Color.black.opacity(0.04), radius: 6, y: 2)
+                .padding(.horizontal, 7)
+                .padding(.top, 8)
+
+                // TASKS CARD
+                VStack(spacing: 11) {
+                    HStack {
+                        Text("Tasks")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.primary)
+                        Spacer()
+                    }
+
+                    if isEditing {
+                        ForEach(tasks.indices, id: \.self) { idx in
+                            taskRow(idx: idx, editing: true)
+                        }
+                        Button {
+                            withAnimation(.spring()) {
+                                tasks.append(TravelTask(title: ""))
+                            }
+                        } label: {
+                            Label("Add Task", systemImage: "plus.circle.fill")
+                                .font(.system(size: 14, weight: .semibold))
                                 .padding(.vertical, 8)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 14)
+                                .background(
+                                    Capsule()
+                                        .fill(Color.accentColor.opacity(0.90))
+                                )
+                                .foregroundColor(.white)
+                                .shadow(color: Color.accentColor.opacity(0.11), radius: 4, y: 1)
                         }
-
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Travel Date & Time")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(.secondary)
-                            if isEditing {
-                                DatePicker("", selection: $travelDate, displayedComponents: [.date, .hourAndMinute])
-                                    .labelsHidden()
-                                    .datePickerStyle(.compact)
-                            } else {
-                                Text(plan.date.formatted(date: .long, time: .shortened))
-                                    .font(.callout)
-                                    .foregroundColor(.primary)
-                            }
-                        }
-
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Reminder")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(.secondary)
-                            if isEditing {
-                                DatePicker("", selection: $reminderDate, in: ...travelDate, displayedComponents: [.date, .hourAndMinute])
-                                    .labelsHidden()
-                                    .datePickerStyle(.compact)
-                            } else {
-                                Text((plan.date.addingTimeInterval(plan.reminderOffset)).formatted(date: .long, time: .shortened))
-                                    .font(.callout)
-                                    .foregroundColor(.primary)
-                            }
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, 3)
+                    } else {
+                        ForEach(plan.tasks.indices, id: \.self) { idx in
+                            taskRow(idx: idx, editing: false)
                         }
                     }
-                    .padding(.vertical, 10)
-                    .padding(.horizontal, 16)
-                    .background(
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 22)
-                            .stroke(Color.blue.opacity(0.10), lineWidth: 1)
-                    )
-                    .shadow(color: Color.black.opacity(0.04), radius: 6, y: 2)
-                    .padding(.horizontal, 7)
+                }
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22)
+                        .stroke(Color.blue.opacity(0.07), lineWidth: 1)
+                )
+                .shadow(color: Color.black.opacity(0.03), radius: 5, y: 1)
+                .padding(.horizontal, 7)
+
+                // "I'm All Set" Button (only when all tasks completed and not editing)
+                if !isEditing && plan.tasks.count > 0 && plan.tasks.allSatisfy({ $0.isCompleted }) && !plan.isCompleted {
+                    Button {
+                        plan.isCompleted = true
+                        NotificationHelper.cancelReminder(for: plan)
+                        showCompletedAlert = true
+                    } label: {
+                        Text("I'm All Set")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.vertical, 10)
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                Capsule()
+                                    .fill(Color.green)
+                            )
+                            .shadow(color: .green.opacity(0.08), radius: 3, y: 2)
+                            .padding(.horizontal, 20)
+                    }
                     .padding(.top, 8)
-
-                    // TASKS CARD
-                    VStack(spacing: 11) {
-                        HStack {
-                            Text("Tasks")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundColor(.primary)
-                            Spacer()
-                        }
-
-                        if isEditing {
-                            ForEach(tasks.indices, id: \.self) { idx in
-                                taskRow(idx: idx, editing: true)
-                            }
-                            Button {
-                                withAnimation(.spring()) {
-                                    tasks.append(TravelTask(title: ""))
-                                }
-                            } label: {
-                                Label("Add Task", systemImage: "plus.circle.fill")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .padding(.vertical, 8)
-                                    .padding(.horizontal, 14)
-                                    .background(
-                                        Capsule()
-                                            .fill(Color.accentColor.opacity(0.90))
-                                    )
-                                    .foregroundColor(.white)
-                                    .shadow(color: Color.accentColor.opacity(0.11), radius: 4, y: 1)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.top, 3)
-                        } else {
-                            ForEach(plan.tasks.indices, id: \.self) { idx in
-                                taskRow(idx: idx, editing: false)
-                            }
-                        }
+                } else if !isEditing && plan.tasks.count > 0 && plan.tasks.allSatisfy({ $0.isCompleted }) && plan.isCompleted {
+                    Button {} label: {
+                        Text("All Tasks Completed")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.vertical, 10)
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                Capsule()
+                                    .fill(Color.gray.opacity(0.70))
+                            )
+                            .padding(.horizontal, 20)
                     }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 22)
-                            .stroke(Color.blue.opacity(0.07), lineWidth: 1)
-                    )
-                    .shadow(color: Color.black.opacity(0.03), radius: 5, y: 1)
-                    .padding(.horizontal, 7)
-
-                    // "I'm All Set" Button (only when all tasks completed and not editing)
-                    if !isEditing && plan.tasks.count > 0 && plan.tasks.allSatisfy({ $0.isCompleted }) && !plan.isCompleted {
-                        Button {
-                            plan.isCompleted = true
-                            NotificationHelper.cancelReminder(for: plan)
-                            showCompletedAlert = true
-                        } label: {
-                            Text("I'm All Set")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundColor(.white)
-                                .padding(.vertical, 10)
-                                .frame(maxWidth: .infinity)
-                                .background(
-                                    Capsule()
-                                        .fill(Color.green)
-                                )
-                                .shadow(color: .green.opacity(0.08), radius: 3, y: 2)
-                                .padding(.horizontal, 20)
-                        }
-                        .padding(.top, 8)
-                    } else if !isEditing && plan.tasks.count > 0 && plan.tasks.allSatisfy({ $0.isCompleted }) && plan.isCompleted {
-                        Button {} label: {
-                            Text("All Tasks Completed")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundColor(.white)
-                                .padding(.vertical, 10)
-                                .frame(maxWidth: .infinity)
-                                .background(
-                                    Capsule()
-                                        .fill(Color.gray.opacity(0.70))
-                                )
-                                .padding(.horizontal, 20)
-                        }
-                        .disabled(true)
-                        .padding(.top, 8)
-                    }
-
-                    Spacer(minLength: 14)
+                    .disabled(true)
+                    .padding(.top, 8)
                 }
-                .padding(.bottom, 18)
+
+                Spacer(minLength: 14)
             }
-            .navigationTitle("Plan Details")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    if !plan.isCompleted && isEditing {
-                        // Cancel (cross)
-                        Button {
-                            cancelEdits()
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 22, weight: .bold))
-                                .foregroundColor(.red)
-                        }
-                        // Save (check)
-                        Button {
-                            saveEdits()
-                        } label: {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 22, weight: .bold))
-                                .foregroundColor(.green)
-                        }
-                    } else if !plan.isCompleted && !isEditing {
-                        Button {
-                            enterEditMode()
-                        } label: {
-                            Image(systemName: "square.and.pencil")
-                                .font(.system(size: 22, weight: .bold))
-                                .foregroundColor(.blue)
-                        }
+            .padding(.bottom, 18)
+        }
+        .navigationTitle("Plan Details")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
+                if !plan.isCompleted && isEditing {
+                    // Cancel (cross)
+                    Button {
+                        cancelEdits()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundColor(.red)
+                    }
+                    // Save (check)
+                    Button {
+                        saveEdits()
+                    } label: {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundColor(.green)
+                    }
+                } else if !plan.isCompleted && !isEditing {
+                    Button {
+                        enterEditMode()
+                    } label: {
+                        Image(systemName: "square.and.pencil")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundColor(.blue)
                     }
                 }
             }
-
-            .alert("Plan name is required.", isPresented: $showNameError) {
-                Button("OK", role: .cancel) {}
-            }
-            .alert("Changes Saved!", isPresented: $showSaveAlert) {
-                Button("OK") { showSaveAlert = false }
-            }
-            .alert("All Tasks Completed, Congrats!", isPresented: $showCompletedAlert) {
-                Button("OK") { dismiss() }
-            }
-            .confirmationDialog("Attach an Image", isPresented: $showImageSourceDialog, titleVisibility: .visible) {
-                Button("Take Photo") {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        activeImagePickerSheet = .camera
-                    }
+        }
+        .alert("Plan name is required.", isPresented: $showNameError) {
+            Button("OK", role: .cancel) {}
+        }
+        .alert("Changes Saved!", isPresented: $showSaveAlert) {
+            Button("OK") { showSaveAlert = false }
+        }
+        .alert("All Tasks Completed, Congrats!", isPresented: $showCompletedAlert) {
+            Button("OK") { dismiss() }
+        }
+        .confirmationDialog(
+            "Attach an Image",
+            isPresented: $showImageSourceDialog,
+            titleVisibility: .visible
+        ) {
+            Button("Take Photo") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    activeImagePickerSheet = .camera
                 }
-                Button("Choose From Gallery") {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        activeImagePickerSheet = .photoLibrary
-                    }
-                }
-                Button("Cancel", role: .cancel) { }
             }
-        
+            Button("Choose From Gallery") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    activeImagePickerSheet = .photoLibrary
+                }
+            }
+            Button("Cancel", role: .cancel) { }
+        }
         .sheet(item: $activeImagePickerSheet) { source in
             FMNImagePicker(sourceType: source == .camera ? .camera : .photoLibrary) { img in
                 if let img = img {
@@ -262,9 +330,48 @@ struct TravelPlanDetailView: View {
             SubjectDetailView(subject: subj)
         }
         .onAppear(perform: initializeEditFields)
+        // Voice recorder (task)
+        .sheet(isPresented: $showTaskVoiceSheet) {
+            VoiceRecorderSheet(
+                onFinish: { url in didFinishTaskRecording(url: url) },
+                onCancel: { didCancelTaskRecording() },
+                voiceFeatureTitle: "Add Task from Voice"
+            )
+        }
+        // Transcribing progress (task)
+        .sheet(isPresented: $isTaskTranscribing) {
+            TranscribeProgressView()
+                .interactiveDismissDisabled(true)
+        }
+        // Confirm/edit transcript -> Add this task
+        .sheet(isPresented: $showConfirmTaskTranscript) {
+            ConfirmTranscriptSheet(
+                text: $taskTranscript,
+                onUse: { acceptTaskTranscript() },
+                onCancel: { showConfirmTaskTranscript = false },
+                primaryLabel: "Add this task",
+                primarySymbol: "plus.circle.fill"
+            )
+        }
+        // Mic denied
+        .alert("Microphone Access Needed", isPresented: $showMicDeniedAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("To record your voice, allow mic access in Settings for ForgetMeNot.")
+        }
+        // Voice errors (if any)
+        .alert(
+            "Error",
+            isPresented: Binding(
+                get: { voiceError != nil },
+                set: { if !$0 { voiceError = nil } }
+            )
+        ) {
+            Button("OK") { voiceError = nil }
+        } message: {
+            Text(voiceError ?? "")
+        }
     }
-    
-    
 
     // MARK: - Task Row
     @ViewBuilder
@@ -286,10 +393,13 @@ struct TravelPlanDetailView: View {
 
             Group {
                 if editing {
-                    TextField("What to do?", text: Binding(
-                        get: { tasks[idx].title },
-                        set: { tasks[idx].title = $0 }
-                    ))
+                    TextField(
+                        "What to do?",
+                        text: Binding(
+                            get: { tasks[idx].title },
+                            set: { tasks[idx].title = $0 }
+                        )
+                    )
                     .padding(.vertical, 8)
                     .padding(.horizontal, 10)
                     .background(Color(.systemGray6).opacity(0.97))
@@ -356,6 +466,26 @@ struct TravelPlanDetailView: View {
                 .padding(.trailing, 1)
             }
 
+            // Mic (editing only)
+            if editing {
+                Button {
+                    editingTaskIndex = idx
+                    onTapTaskVoice()
+                } label: {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(.systemGray5))
+                            .frame(width: 38, height: 38)
+                        Image(systemName: "mic.fill")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 14, height: 18)
+                            .foregroundColor(.accentColor)
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+
             if editing && tasks.count > 1 {
                 Button {
                     tasks.remove(at: idx)
@@ -377,6 +507,7 @@ struct TravelPlanDetailView: View {
     }
 
     // MARK: - Editing Logic
+
     private func initializeEditFields() {
         planName = plan.name
         travelDate = plan.date
@@ -421,6 +552,56 @@ struct TravelPlanDetailView: View {
         tasks[index].subjectImageID = subjImg.id
         showImageLift = false
         imageToLift = nil
+        editingTaskIndex = nil
+    }
+
+    // MARK: - Voice-to-Task helpers
+
+    private func onTapTaskVoice() {
+        Task {
+            let status = await mic.request()
+            if status == .granted {
+                showTaskVoiceSheet = true
+            } else {
+                showMicDeniedAlert = true
+            }
+        }
+    }
+
+    private func didFinishTaskRecording(url: URL) {
+        lastTaskRecordingURL = url
+        showTaskVoiceSheet = false
+        Task { await transcribeTask(url: url) }
+    }
+
+    private func didCancelTaskRecording() {
+        showTaskVoiceSheet = false
+        editingTaskIndex = nil
+    }
+
+    private func transcribeTask(url: URL) async {
+        isTaskTranscribing = true
+        defer {
+            isTaskTranscribing = false
+            if let url = lastTaskRecordingURL {
+                try? FileManager.default.removeItem(at: url)
+                lastTaskRecordingURL = nil
+            }
+        }
+        do {
+            let text = try await stt.transcribe(fileURL: url)
+            taskTranscript = text
+            showConfirmTaskTranscript = true
+        } catch {
+            voiceError = error.localizedDescription
+        }
+    }
+
+    private func acceptTaskTranscript() {
+        guard let idx = editingTaskIndex else { return }
+        tasks[idx].title = taskTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
+        showConfirmTaskTranscript = false
+        taskTranscript = ""
         editingTaskIndex = nil
     }
 }
