@@ -94,7 +94,7 @@ final class TalkToPlanViewModel: ObservableObject {
                 print("Chat plan error:", error.localizedDescription)
                 self.error = error.localizedDescription
                 // allow navigation with sane defaults if you like
-                pendingPlanName = "Trip"
+                pendingPlanName = "Event"
                 pendingEventDate = .now
                 pendingReminderDate = .now
                 pendingTasks = []

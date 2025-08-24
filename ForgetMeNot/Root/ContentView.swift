@@ -21,10 +21,12 @@ struct ContentView: View {
     // Talk-to-Plan: use the modular ViewModel
     @StateObject private var vm = TalkToPlanViewModel(apiKey: APIKeyLoader.openAIKey)
     
+    @State private var showWalkthrough = false
+    
     @ViewBuilder
     private var generatingOverlay: some View {
         Color.black.opacity(0.07).ignoresSafeArea()
-        ProgressView("Generating plan with ChatGPT…")
+        ProgressView("Organizing plan with ChatGPT…")
             .padding(20)
             .background(.ultraThinMaterial)
             .cornerRadius(16)
@@ -37,14 +39,14 @@ struct ContentView: View {
             VStack(spacing: 0) {
                 // Header Card
                 VStack(spacing: 4) {
-                    Text("🧳ForgetMeNot")
-                        .font(.system(size: 28, weight: .bold, design: .monospaced))
+                    Text("🧳Never4Get🧳")
+                        .font(.system(size: 28, weight: .bold))
                         .foregroundColor(.accentColor)
                         .shadow(color: .accentColor.opacity(0.04), radius: 2, y: 1)
                         .padding(.bottom, 2)
-                    Text("Let your iPhone remember important details!")
+                    Text("Let your iPhone remember everything!")
                         .foregroundColor(.secondary)
-                        .font(.system(size: 14, weight: .medium, design: .monospaced))
+                        .font(.system(size: 14, weight: .medium))
                         .multilineTextAlignment(.center)
                 }
                 .padding(.vertical, 18)
@@ -64,7 +66,7 @@ struct ContentView: View {
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "plus.circle.fill")
-                            Text("New Plan")
+                            Text("New Event")
                         }
                         .font(.system(size: 16, weight: .semibold))
                         .padding(.vertical, 10)
@@ -115,7 +117,7 @@ struct ContentView: View {
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "mic.circle.fill")
-                            Text("Talk to Make Plans!")
+                            Text("Voice to Event")
                         }
                         .font(.system(size: 16, weight: .semibold))
                         .padding(.vertical, 10)
@@ -143,7 +145,7 @@ struct ContentView: View {
                 if plans.isEmpty {
                     VStack {
                         Spacer(minLength: 60)
-                        Text("No event plans yet.\nTap 'Create a New Event Plan' to get started!")
+                        Text("No event plans yet.\nTap 'New Event' to get started!")
                             .font(.title3.weight(.medium))
                             .foregroundColor(.gray)
                             .multilineTextAlignment(.center)
@@ -152,7 +154,7 @@ struct ContentView: View {
                 } else {
                     // Incomplete
                     if !incompletePlans.isEmpty {
-                        SectionHeader(text: "Upcoming Plans", systemImage: "clock")
+                        SectionHeader(text: "Upcoming Events", systemImage: "clock")
                             .padding(.top , 28)
                             .padding(.bottom, 8)
                             .padding(.leading, 8)
@@ -200,13 +202,55 @@ struct ContentView: View {
         .blur(radius: vm.isGeneratingPlan ? 2 : 0)
         .disabled(vm.isGeneratingPlan)
     }
+    
+    private struct WalkthroughButton: View {
+        var action: () -> Void
+
+        var body: some View {
+            Button(action: action) {
+                HStack(spacing: 6) {
+                    Image(systemName: "questionmark.circle.fill")
+                        .imageScale(.medium)
+                    Text("Walkthrough")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+                .background(.ultraThinMaterial)
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(Color.secondary.opacity(0.25), lineWidth: 0.8)
+                )
+                .shadow(radius: 1.5, y: 1)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Open walkthrough")
+        }
+    }
 
 
     var body: some View {
         NavigationStack(path: $navPath) {
             ZStack {
+                Color(.systemBackground).ignoresSafeArea()
                 mainList
                 if vm.isGeneratingPlan { generatingOverlay }
+                
+            }
+            
+            .safeAreaInset(edge: .bottom) {  // keeps the button off the home indicator
+                HStack {
+                    Spacer()
+                    WalkthroughButton {
+                        showWalkthrough = true
+                    }
+                    .padding(.trailing, 16)
+                }
+                .padding(.bottom, 8)
+            }
+            .sheet(isPresented: $showWalkthrough) {
+                WalkthroughView()
             }
 
             // Recorder
