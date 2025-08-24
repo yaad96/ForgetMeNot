@@ -61,7 +61,7 @@ func deviceSupportsLLM() -> Bool {
 
 struct PlanSuggestion {
     var reminderDate: Date
-    var tasks: [TravelTask]
+    var tasks: [EventTask]
 }
 
 @ViewBuilder

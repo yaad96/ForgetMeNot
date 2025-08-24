@@ -24,17 +24,17 @@ extension UIImage {
     }
 }
 
-struct NewTravelPlanView: View {
+struct NewEventPlanView: View {
     init(
         planName: String = "",
-        travelDate: Date = .now.addingTimeInterval(86400),
+        eventDate: Date = .now.addingTimeInterval(86400),
         reminderDate: Date = .now.addingTimeInterval(43200),
-        tasks: [TravelTask] = [TravelTask(title: "Collect keys"), TravelTask(title: "Pack passport")],
-        onDone: @escaping (TravelPlan?) -> Void
+        tasks: [EventTask] = [EventTask(title: "Collect keys"), EventTask(title: "Pack passport")],
+        onDone: @escaping (EventPlan?) -> Void
     ) {
         self.onDone = onDone
         _planName = State(initialValue: planName)
-        _travelDate = State(initialValue: travelDate)
+        _eventDate = State(initialValue: eventDate)
         _reminderDate = State(initialValue: reminderDate)
         _tasks = State(initialValue: tasks)
     }
@@ -53,11 +53,11 @@ struct NewTravelPlanView: View {
 
     // Plan fields
     @State private var planName: String = ""
-    @State private var travelDate: Date = .now.addingTimeInterval(86400)
+    @State private var eventDate: Date = .now.addingTimeInterval(86400)
     @State private var reminderDate: Date = .now.addingTimeInterval(43200)
-    @State private var tasks: [TravelTask] = [
-        TravelTask(title: "Collect keys"),
-        TravelTask(title: "Pack passport")
+    @State private var tasks: [EventTask] = [
+        EventTask(title: "Collect keys"),
+        EventTask(title: "Pack passport")
     ]
     @State private var showNameError = false
 
@@ -77,7 +77,7 @@ struct NewTravelPlanView: View {
     private let mic = MicPermissionService()
     private let stt = OpenAITranscriptionService(apiKey: APIKeyLoader.openAIKey)
 
-    var onDone: (TravelPlan?) -> Void
+    var onDone: (EventPlan?) -> Void
 
     // --- Small helper to avoid solver churn on partial ranges
     @ViewBuilder
@@ -86,7 +86,7 @@ struct NewTravelPlanView: View {
             Text("Reminder")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(.secondary)
-            let upper = travelDate
+            let upper = eventDate
             DatePicker(
                 "",
                 selection: $reminderDate,
@@ -202,10 +202,10 @@ struct NewTravelPlanView: View {
                     PlanTitleField($planName)
 
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("Travel Date & Time")
+                        Text("Event Date & Time")
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(.secondary)
-                        DatePicker("", selection: $travelDate, displayedComponents: [.date, .hourAndMinute])
+                        DatePicker("", selection: $eventDate, displayedComponents: [.date, .hourAndMinute])
                             .labelsHidden()
                             .datePickerStyle(.compact)
                     }
@@ -240,7 +240,7 @@ struct NewTravelPlanView: View {
                     // ADD TASK BUTTON
                     Button {
                         withAnimation(.spring()) {
-                            tasks.append(TravelTask(title: ""))
+                            tasks.append(EventTask(title: ""))
                         }
                     } label: {
                         HStack {
@@ -276,7 +276,7 @@ struct NewTravelPlanView: View {
             }
             .padding(.bottom, 18)
         }
-        .navigationTitle("New Travel Plan")
+        .navigationTitle("New Event Plan")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
@@ -392,10 +392,10 @@ struct NewTravelPlanView: View {
             dismiss()
             return
         }
-        let reminderOffset: TimeInterval = reminderDate.timeIntervalSince(travelDate)
-        let plan = TravelPlan(name: planName, date: travelDate, tasks: cleanTasks, reminderOffset: reminderOffset)
+        let reminderOffset: TimeInterval = reminderDate.timeIntervalSince(eventDate)
+        let plan = EventPlan(name: planName, date: eventDate, tasks: cleanTasks, reminderOffset: reminderOffset)
         modelContext.insert(plan)
-        NotificationHelper.scheduleTravelReminder(for: plan, offset: reminderOffset)
+        NotificationHelper.scheduleEventReminder(for: plan, offset: reminderOffset)
         onDone(plan)
     }
 

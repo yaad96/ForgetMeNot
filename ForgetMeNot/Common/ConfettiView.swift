@@ -12,7 +12,7 @@ struct ConfettiView: View {
                 // Celebration message
                 VStack {
                     Spacer()
-                    Text("🎉 All Tasks Complete! Happy Travels! 🎉")
+                    Text("🎉 All Tasks Complete! Way to go! 🎉")
                         .font(.title2.bold())
                         .foregroundColor(.green)
                         .padding()

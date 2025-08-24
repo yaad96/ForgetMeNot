@@ -7,8 +7,8 @@ import UIKit
 struct ForgetMeNotApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            TravelPlan.self,
-            TravelTask.self,
+            EventPlan.self,
+            EventTask.self,
             SubjectImage.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)

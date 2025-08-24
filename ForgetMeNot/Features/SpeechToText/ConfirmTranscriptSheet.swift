@@ -13,7 +13,7 @@ struct ConfirmTranscriptSheet: View {
     let onCancel: () -> Void
     @FocusState private var focus: Bool
 
-    var primaryLabel: String = "Generate Smart Travel Plan"
+    var primaryLabel: String = "Generate Smart Event Plan"
     var primarySymbol: String = "sparkles"
 
     var body: some View {

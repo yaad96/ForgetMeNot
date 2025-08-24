@@ -2,20 +2,20 @@ import SwiftUI
 import SwiftData
 import UIKit
 
-struct TravelPlanDetailView: View {
+struct EventPlanDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
-    let plan: TravelPlan
+    let plan: EventPlan
 
     @Query var subjects: [SubjectImage]
 
     // --- Local Editing State ---
     @State private var isEditing = false
     @State private var planName: String = ""
-    @State private var travelDate: Date = .now
+    @State private var eventDate: Date = .now
     @State private var reminderDate: Date = .now
-    @State private var tasks: [TravelTask] = []
+    @State private var tasks: [EventTask] = []
 
     // --- Image Picker Logic ---
     @State private var showImageSourceDialog = false
@@ -46,14 +46,14 @@ struct TravelPlanDetailView: View {
     // MARK: - Tiny helpers to keep the type checker happy
 
     @ViewBuilder
-    private func TravelDateEditingSection() -> some View {
+    private func EventDateEditingSection() -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Travel Date & Time")
+            Text("Event Date & Time")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.secondary)
             DatePicker(
                 "",
-                selection: $travelDate,
+                selection: $eventDate,
                 displayedComponents: [.date, .hourAndMinute]
             )
             .labelsHidden()
@@ -62,9 +62,9 @@ struct TravelPlanDetailView: View {
     }
 
     @ViewBuilder
-    private func TravelDateDisplaySection() -> some View {
+    private func EventDateDisplaySection() -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Travel Date & Time")
+            Text("Event Date & Time")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.secondary)
             let d = plan.date
@@ -122,24 +122,24 @@ struct TravelPlanDetailView: View {
                     }
 
                     // Precompute sections with type erasure to calm the compiler
-                    let travelDateSection: AnyView = {
+                    let eventDateSection: AnyView = {
                         if isEditing {
-                            return AnyView(TravelDateEditingSection())
+                            return AnyView(EventDateEditingSection())
                         } else {
-                            return AnyView(TravelDateDisplaySection())
+                            return AnyView(EventDateDisplaySection())
                         }
                     }()
 
                     let reminderSection: AnyView = {
                         if isEditing {
-                            let upper = travelDate
+                            let upper = eventDate
                             return AnyView(ReminderEditingSection(upper: upper))
                         } else {
                             return AnyView(ReminderDisplaySection())
                         }
                     }()
 
-                    travelDateSection
+                    eventDateSection
                     reminderSection
                 }
                 .padding(.vertical, 10)
@@ -171,7 +171,7 @@ struct TravelPlanDetailView: View {
                         }
                         Button {
                             withAnimation(.spring()) {
-                                tasks.append(TravelTask(title: ""))
+                                tasks.append(EventTask(title: ""))
                             }
                         } label: {
                             Label("Add Task", systemImage: "plus.circle.fill")
@@ -510,7 +510,7 @@ struct TravelPlanDetailView: View {
 
     private func initializeEditFields() {
         planName = plan.name
-        travelDate = plan.date
+        eventDate = plan.date
         reminderDate = plan.date.addingTimeInterval(plan.reminderOffset)
         tasks = plan.tasks
     }
@@ -531,11 +531,11 @@ struct TravelPlanDetailView: View {
             return
         }
         plan.name = planName
-        plan.date = travelDate
-        plan.reminderOffset = reminderDate.timeIntervalSince(travelDate)
+        plan.date = eventDate
+        plan.reminderOffset = reminderDate.timeIntervalSince(eventDate)
         plan.tasks = cleanTasks
         NotificationHelper.cancelReminder(for: plan)
-        NotificationHelper.scheduleTravelReminder(for: plan, offset: plan.reminderOffset)
+        NotificationHelper.scheduleEventReminder(for: plan, offset: plan.reminderOffset)
         isEditing = false
         //showSaveAlert = true
     }
