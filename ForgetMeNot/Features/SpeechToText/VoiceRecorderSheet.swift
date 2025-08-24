@@ -17,7 +17,7 @@ struct VoiceRecorderSheet: View {
 
     @StateObject private var recorder = VoiceRecorder()
     
-    var voiceFeatureTitle:String = "Create Plan from Voice"
+    var voiceFeatureTitle:String = "Create Event and Tasks from Voice"
     
     var body: some View {
         VStack(spacing: 20) {

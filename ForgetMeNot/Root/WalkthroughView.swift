@@ -1,3 +1,11 @@
+//
+//  WalkthroughView.swift
+//  ForgetMeNot
+//
+//  Created by Mainul Hossain on 8/23/25.
+//
+
+
 import SwiftUI
 
 struct WalkthroughView: View {
@@ -18,9 +26,9 @@ struct WalkthroughView: View {
                         icon: "mic.fill",
                         title: "Talk to Plan",
                         bullets: [
-                            "Tap Record. Speak naturally about dates, places, budget, and must do items.",
+                            "Tap Record. Speak naturally about dates, places, budget, and must do items. You can talk about when you need to be reminded, what you need to be reminded etc.",
                             "Pause and resume as needed. Stop when you are done.",
-                            "Edit the transcript then tap Generate Smart Travel Plan."
+                            "Edit the transcript then tap Generate Smart Event or Smart Plan."
                         ],
                         tip: "Say constraints in the prompt, example, hotel under 120 dollars near Midtown."
                     )
@@ -31,20 +39,20 @@ struct WalkthroughView: View {
                         bullets: [
                             "Grant Calendar access in Settings.",
                             "Pick an event and tap Make Smart Plan.",
-                            "Tasks and time blocks match the event window."
+                            "Event title, date, reminder dates, tasks are automatically generated via AI."
                         ],
-                        tip: "Check time zones when travel crosses regions."
+                        tip: "You can also create event from calendar manually"
                     )
 
                     FeatureSection(
                         icon: "checkmark.circle",
                         title: "Tasks",
                         bullets: [
-                            "Auto created from speech and plans, or add manually.",
-                            "Set due date, reminders, and notes.",
-                            "Mark done, reorder, or convert blocks to tasks."
+                            "Auto created from speech, calendars and plans, or add manually.",
+                            "Set due date, reminders for all the tasks",
+                            "Mark done to tasks."
                         ],
-                        tip: "Use filters Today, Overdue, Completed to focus."
+                        tip: "Marking all tasks as done will get you to complete the event"
                     )
 
                     FeatureSection(
@@ -58,7 +66,7 @@ struct WalkthroughView: View {
                         tip: "Use the lifted subject as the task thumbnail."
                     )
 
-                    FeatureSection(
+                    /*FeatureSection(
                         icon: "wand.and.stars",
                         title: "Smart Plan Editor",
                         bullets: [
@@ -66,9 +74,9 @@ struct WalkthroughView: View {
                             "Edit duration and notes inline.",
                             "Regenerate suggestions for a section without losing locked items."
                         ]
-                    )
+                    )*/
 
-                    FeatureSection(
+                    /*FeatureSection(
                         icon: "character.book.closed.fill",
                         title: "Language and Multilingual input",
                         bullets: [
@@ -77,9 +85,19 @@ struct WalkthroughView: View {
                             "Fix names and numbers in the transcript before generating."
                         ],
                         tip: "Say dates and times clearly, example, October twelve at five pm."
+                    )*/
+                    
+                    FeatureSection(
+                        icon: "bell.badge",
+                        title: "Notifications",
+                        bullets: [
+                            "Allow notifications in iOS Settings.",
+                            "Each event can have a reminder by time.",
+                            "Remind me of the tasks in ten minutes, one hour, or tomorrow."
+                        ]
                     )
 
-                    FeatureSection(
+                    /*FeatureSection(
                         icon: "bell.badge",
                         title: "Notifications",
                         bullets: [
@@ -87,19 +105,19 @@ struct WalkthroughView: View {
                             "Each task can have a reminder by time or location when available.",
                             "Snooze ten minutes, one hour, or tomorrow."
                         ]
-                    )
+                    )*/
 
                     FeatureSection(
                         icon: "lock.shield",
                         title: "Privacy and data control",
                         bullets: [
                             "Voice and calendar text are sent to the AI service to create smart plans and tasks.",
-                            "Delete transcripts and plans at any time.",
-                            "Export a plan via the share menu."
+                            "Edit transcripts of events and tasks before sending to the AI service.",
+                        
                         ]
                     )
 
-                    FeatureSection(
+                    /*FeatureSection(
                         icon: "questionmark.circle",
                         title: "Troubleshooting",
                         bullets: [
@@ -108,7 +126,7 @@ struct WalkthroughView: View {
                             "Missing photos, check Photos permission for the app.",
                             "Silent reminders, check iOS notification settings and Focus."
                         ]
-                    )
+                    )*/
 
                     FooterCTA()
                 }
