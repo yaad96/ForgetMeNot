@@ -23,9 +23,9 @@ final class TalkToPlanViewModel: ObservableObject {
     // New plan navigation payload
     @Published var isNewPlanActive = false
     @Published var pendingPlanName = ""
-    @Published var pendingTravelDate = Date()
+    @Published var pendingEventDate = Date()
     @Published var pendingReminderDate = Date()
-    @Published var pendingTasks: [TravelTask] = []
+    @Published var pendingTasks: [EventTask] = []
     
     @Published var isGeneratingPlan = false
 
@@ -82,12 +82,12 @@ final class TalkToPlanViewModel: ObservableObject {
             do {
                 let plan = try await planGen.generate(from: transcript)
                 let iso = ISO8601DateFormatter()
-                let travel = iso.date(from: plan.date) ?? .now
-                let notif  = iso.date(from: plan.reminder_date) ?? travel
+                let event = iso.date(from: plan.date) ?? .now
+                let notif  = iso.date(from: plan.reminder_date) ?? event
                 pendingPlanName = plan.title.isEmpty ? "Trip" : plan.title
-                pendingTravelDate = travel
+                pendingEventDate = event
                 pendingReminderDate = notif
-                pendingTasks = plan.tasks.map { TravelTask(title: $0) }
+                pendingTasks = plan.tasks.map { EventTask(title: $0) }
                 isGeneratingPlan = false
                 isNewPlanActive = true
             } catch {
@@ -95,7 +95,7 @@ final class TalkToPlanViewModel: ObservableObject {
                 self.error = error.localizedDescription
                 // allow navigation with sane defaults if you like
                 pendingPlanName = "Trip"
-                pendingTravelDate = .now
+                pendingEventDate = .now
                 pendingReminderDate = .now
                 pendingTasks = []
                 isGeneratingPlan = false

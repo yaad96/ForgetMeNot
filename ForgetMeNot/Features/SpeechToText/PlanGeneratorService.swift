@@ -18,7 +18,7 @@ struct PlanGeneratorService {
         let nowISO = ISO8601DateFormatter().string(from: Date())
 
         let systemPrompt = """
-        You extract a travel plan from user text.
+        You extract a travel/event plan from user text.
         Return ONLY strict JSON with fields: "title", "date", "reminder_date", "tasks".
         - "date" and "reminder_date" must be ISO8601 with timezone offset.
         - "tasks" is an array of short strings.

@@ -8,9 +8,9 @@ struct AllUpcomingView: View {
 
     @State private var isNewPlanActive = false
     @State private var pendingPlanName: String = ""
-    @State private var pendingTravelDate: Date = .now
+    @State private var pendingEventDate: Date = .now
     @State private var pendingReminderDate: Date = .now
-    @State private var pendingTasks: [TravelTask] = []
+    @State private var pendingTasks: [EventTask] = []
     @State private var isGeneratingPlan = false
     @State private var notesToShow = ""
 
@@ -33,18 +33,18 @@ struct AllUpcomingView: View {
                                         if let suggestion = suggestion {
                                             let formatter = ISO8601DateFormatter()
                                             let notifDate = formatter.date(from: suggestion.notification_date) ?? (item.date ?? .now)
-                                            let tasks = suggestion.tasks.map { TravelTask(title: $0) }
+                                            let tasks = suggestion.tasks.map { EventTask(title: $0) }
                                             pendingPlanName = item.title
-                                            pendingTravelDate = item.date ?? .now
+                                            pendingEventDate = item.date ?? .now
                                             pendingReminderDate = notifDate
                                             pendingTasks = tasks
                                         } else {
                                             pendingPlanName = item.title
-                                            pendingTravelDate = item.date ?? .now
+                                            pendingEventDate = item.date ?? .now
                                             pendingReminderDate = item.date ?? .now
                                             pendingTasks = [
-                                                TravelTask(title: "Task A"),
-                                                TravelTask(title: "Task B")
+                                                EventTask(title: "Task A"),
+                                                EventTask(title: "Task B")
                                             ]
 
                                         }
@@ -58,11 +58,11 @@ struct AllUpcomingView: View {
                             onCreateBlank: {
                                             // Generate "Plan Yourself"
                                             pendingPlanName = item.title
-                                            pendingTravelDate = item.date ?? .now
+                                            pendingEventDate = item.date ?? .now
                                             pendingReminderDate = item.date ?? .now
                                             pendingTasks = [
-                                                TravelTask(title: "Task A"),
-                                                TravelTask(title: "Task B")
+                                                EventTask(title: "Task A"),
+                                                EventTask(title: "Task B")
                                             ]
 
                                             isNewPlanActive = true // << navigation push!
@@ -87,9 +87,9 @@ struct AllUpcomingView: View {
             }
         }
         .navigationDestination(isPresented: $isNewPlanActive) {
-            NewTravelPlanView(
+            NewEventPlanView(
                 planName: pendingPlanName,
-                travelDate: pendingTravelDate,
+                eventDate: pendingEventDate,
                 reminderDate: pendingReminderDate,
                 tasks: pendingTasks
             ) { newPlan in
@@ -177,7 +177,7 @@ struct EventCard: View {
             Button(action: onCreatePlan) {
                 HStack(spacing: 8) {
                     Image(systemName: "sparkles")
-                    Text("Generate Smart Travel Plan")
+                    Text("Generate Smart Event Plan")
                 }
                 .font(.system(size: 14, weight: .semibold))
                 .padding(.vertical, 7)

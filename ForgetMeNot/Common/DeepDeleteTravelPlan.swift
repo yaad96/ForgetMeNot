@@ -1,7 +1,7 @@
 import SwiftData
 import Foundation  // <-- This is needed for UUID
 
-func deepDeleteTravelPlan(_ plan: TravelPlan, modelContext: ModelContext) {
+func deepDeleteEventPlan(_ plan: EventPlan, modelContext: ModelContext) {
     // 1. Cancel notification(s) for the plan
     NotificationHelper.cancelReminder(for: plan)
     

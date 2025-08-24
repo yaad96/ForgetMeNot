@@ -50,7 +50,7 @@ func fetchPlanSuggestionOpenAI(
     let payload: [String: Any] = [
         "model": "gpt-3.5-turbo",
         "messages": [
-            ["role": "system", "content": "You are a helpful travel planning assistant."],
+            ["role": "system", "content": "You are a helpful travel/event planning assistant."],
             ["role": "user", "content": userPrompt]
         ],
         "max_tokens": 400,

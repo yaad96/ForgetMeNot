@@ -2,36 +2,35 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleDevelopmentRegion</key>
-    <string>en</string>
-    <key>CFBundleExecutable</key>
-    <string>$(EXECUTABLE_NAME)</string>
-    <key>CFBundleIdentifier</key>
-    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-    <key>CFBundleInfoDictionaryVersion</key>
-    <string>6.0</string>
-    <key>CFBundleName</key>
-    <string>$(PRODUCT_NAME)</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>CFBundleShortVersionString</key>
-    <string>1.0</string>
-    <key>CFBundleVersion</key>
-    <string>1</string>
-    <key>LSRequiresIPhoneOS</key>
-    <true/>
-    <key>UILaunchStoryboardName</key>
-    <string>LaunchScreen</string>
-    <key>NSCameraUsageDescription</key>
-    <string>Allow ForgetMeNot to use your camera for photos</string>
-    <key>NSPhotoLibraryUsageDescription</key>
-    <string>Allow ForgetMeNot to access your photos</string>
-    <key>NSCalendarsUsageDescription</key>
-    <string>This app needs access to your calendar to suggest travel tasks.</string>
-    <key>NSRemindersUsageDescription</key>
-    <string>This app needs access to your Reminders to help you plan better.</string>
-    <key>NSMicrophoneUsageDescription</key>
-    <string>ForgetMeNot needs microphone access to capture your voice for Talk-to-Plan.</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Allow ForgetMeNot to use your camera for photos</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Allow ForgetMeNot to access your photos</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>This app needs access to your calendar to suggest event tasks.</string>
+	<key>NSRemindersUsageDescription</key>
+	<string>This app needs access to your Reminders to help you plan better.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>ForgetMeNot needs microphone access to capture your voice for Talk-to-Plan.</string>
 </dict>
 </plist>
-

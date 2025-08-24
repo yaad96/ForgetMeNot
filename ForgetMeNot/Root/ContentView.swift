@@ -7,16 +7,16 @@ import UIKit     // for opening Settings
 enum AppNav: Hashable {
     case newPlan
     case allUpcoming
-    case planDetail(TravelPlan)
+    case planDetail(EventPlan)
 }
 
 struct ContentView: View {
-    @Query(sort: \TravelPlan.date, order: .forward) var plans: [TravelPlan]
+    @Query(sort: \EventPlan.date, order: .forward) var plans: [EventPlan]
     @Environment(\.modelContext) private var modelContext
 
     @State private var navPath = NavigationPath()
-    @State private var planToOpen: TravelPlan?
-    @State private var newPlanParams: (planName: String?, travelDate: Date?, reminderDate: Date?, tasks: [TravelTask]?) = (nil, nil, nil, nil)
+    @State private var planToOpen: EventPlan?
+    @State private var newPlanParams: (planName: String?, eventDate: Date?, reminderDate: Date?, tasks: [EventTask]?) = (nil, nil, nil, nil)
 
     // Talk-to-Plan: use the modular ViewModel
     @StateObject private var vm = TalkToPlanViewModel(apiKey: APIKeyLoader.openAIKey)
@@ -137,13 +137,13 @@ struct ContentView: View {
                 .padding(.horizontal, 18)
 
                 // Sections
-                let incompletePlans: [TravelPlan] = plans.filter { !$0.isCompleted }
-                let completedPlans:   [TravelPlan] = plans.filter {  $0.isCompleted }
+                let incompletePlans: [EventPlan] = plans.filter { !$0.isCompleted }
+                let completedPlans:   [EventPlan] = plans.filter {  $0.isCompleted }
 
                 if plans.isEmpty {
                     VStack {
                         Spacer(minLength: 60)
-                        Text("No travel plans yet.\nTap 'Create a New Travel Plan' to get started!")
+                        Text("No event plans yet.\nTap 'Create a New Event Plan' to get started!")
                             .font(.title3.weight(.medium))
                             .foregroundColor(.gray)
                             .multilineTextAlignment(.center)
@@ -164,7 +164,7 @@ struct ContentView: View {
                                     onTap: {
                                         navPath.append(AppNav.planDetail(plan))
                                     },
-                                    onDelete: { deepDeleteTravelPlan(plan, modelContext: modelContext) }
+                                    onDelete: { deepDeleteEventPlan(plan, modelContext: modelContext) }
                                 )
                             }
                         }
@@ -184,7 +184,7 @@ struct ContentView: View {
                                     onTap: {
                                         navPath.append(AppNav.planDetail(plan))
                                     },
-                                    onDelete: { deepDeleteTravelPlan(plan, modelContext: modelContext) }
+                                    onDelete: { deepDeleteEventPlan(plan, modelContext: modelContext) }
                                 )
                             }
                         }
@@ -261,7 +261,7 @@ struct ContentView: View {
             .navigationDestination(for: AppNav.self) { destination in
                 switch destination {
                 case .newPlan:
-                    NewTravelPlanView { newPlan in
+                    NewEventPlanView { newPlan in
                         if let plan = newPlan {
                             navPath.removeLast(navPath.count)
                             navPath.append(AppNav.planDetail(plan))
@@ -276,15 +276,15 @@ struct ContentView: View {
                         navPath: $navPath
                     )
                 case .planDetail(let plan):
-                    TravelPlanDetailView(plan: plan)
+                    EventPlanDetailView(plan: plan)
                 }
             }
 
-            // Navigate to NewTravelPlanView with pending values from VM
+            // Navigate to NewEventPlanView with pending values from VM
             .navigationDestination(isPresented: $vm.isNewPlanActive) {
-                NewTravelPlanView(
+                NewEventPlanView(
                     planName: vm.pendingPlanName,
-                    travelDate: vm.pendingTravelDate,
+                    eventDate: vm.pendingEventDate,
                     reminderDate: vm.pendingReminderDate,
                     tasks: vm.pendingTasks
                 ) { newPlan in
@@ -323,7 +323,7 @@ struct SectionHeader: View {
 
 // MARK: - Plan Card
 struct PlanCard: View {
-    let plan: TravelPlan
+    let plan: EventPlan
     let isCompleted: Bool
     let onTap: () -> Void
     let onDelete: () -> Void

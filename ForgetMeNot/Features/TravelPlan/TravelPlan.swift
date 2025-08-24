@@ -2,17 +2,17 @@ import Foundation
 import SwiftData
 
 @Model
-class TravelPlan: Identifiable {
+class EventPlan: Identifiable {
     @Attribute(.unique) var id: UUID
     var name: String
     var date: Date
-    @Relationship(deleteRule: .cascade) var tasks: [TravelTask]
+    @Relationship(deleteRule: .cascade) var tasks: [EventTask]
     var reminderOffset: TimeInterval
     var isCompleted: Bool = false   // <-- ADD THIS FIELD
 
     init(name: String,
          date: Date,
-         tasks: [TravelTask] = [],
+         tasks: [EventTask] = [],
          reminderOffset: TimeInterval = -3600,
          id: UUID = .init(),
          isCompleted: Bool = false) {     // <-- ADD THIS TO INIT
@@ -27,7 +27,7 @@ class TravelPlan: Identifiable {
 
 
 @Model
-class TravelTask: Identifiable {
+class EventTask: Identifiable {
     @Attribute(.unique) var id: UUID
     var title: String
     var subjectImageID: UUID?
