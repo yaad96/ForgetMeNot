@@ -16,6 +16,10 @@ struct ForgetMeNotApp: App {
     }()
 
     init() {
+        // ✅ Make sure taps on notifications are routed to your singleton
+        UNUserNotificationCenter.current().delegate = NotificationRouter.shared
+
+        // Your existing permission request
         UNUserNotificationCenter.current()
             .requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
                 print("Notification permission granted: \(granted)")

@@ -23,6 +23,9 @@ struct ContentView: View {
     
     @State private var showWalkthrough = false
     
+    @StateObject private var router = NotificationRouter.shared
+
+    
     @ViewBuilder
     private var generatingOverlay: some View {
         Color.black.opacity(0.07).ignoresSafeArea()
@@ -340,6 +343,16 @@ struct ContentView: View {
                     }
                 }
             }
+            .onReceive(router.$pendingPlanID.compactMap { $0 }) { id in
+                // find the plan in your SwiftData query
+                if let plan = plans.first(where: { $0.id == id }) {
+                    // reset to root then push to detail
+                    navPath.removeLast(navPath.count)
+                    navPath.append(AppNav.planDetail(plan))
+                }
+            }
+
+            
         }
     }
 }
