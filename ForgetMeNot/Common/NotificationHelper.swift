@@ -2,43 +2,78 @@ import Foundation
 import UserNotifications
 
 struct NotificationHelper {
-    /// Cancels any scheduled notification for the given plan.
+    // App-level storage/preview cap
+    static let maxRemindersStored = 100
+    // iOS pending limit per app (historically ~64)
+    static let maxPendingPeriOS = 64
+
+    // Remove ALL requests for this plan by id prefix
     static func cancelReminder(for plan: EventPlan) {
         let center = UNUserNotificationCenter.current()
-        let identifier = "event_reminder_\(plan.id)"
-        center.removePendingNotificationRequests(withIdentifiers: [identifier])
+        let prefix = "event_reminder_\(plan.id.uuidString)_"
+        center.getPendingNotificationRequests { reqs in
+            let ids = reqs.map(\.identifier).filter { $0.hasPrefix(prefix) }
+            if !ids.isEmpty {
+                center.removePendingNotificationRequests(withIdentifiers: ids)
+            }
+        }
     }
-    
-    /// Schedules a event reminder for the given plan at the given offset.
-    /// If a reminder already exists, it is cancelled and replaced.
-    // NotificationHelper.swift
+
+    // Backward compatible single API
     static func scheduleEventReminder(for plan: EventPlan, offset: TimeInterval) {
+        scheduleEventReminders(for: plan, offsets: [offset])
+    }
+
+    // Multi schedule with guards: skip past, nudge near-now, hand iOS only first 64
+    static func scheduleEventReminders(for plan: EventPlan, offsets: [TimeInterval]) {
         cancelReminder(for: plan)
 
         let center = UNUserNotificationCenter.current()
-        let triggerDate = plan.date.addingTimeInterval(offset)
-        let content = UNMutableNotificationContent()
-        content.title = "Upcoming Event: \(plan.name)"
-        content.body = "Get ready! Your event is on \(formatted(plan.date)). Tap to check your list."
-        content.sound = .default
+        let now = Date()
 
-        // ✅ carry the plan id so we can deep-link on tap
-        content.userInfo = ["eventPlanID": plan.id.uuidString]
-        content.categoryIdentifier = "EVENT_REMINDER"
+        // Convert relative offsets -> absolute fire dates, future-only, sorted
+        let future = offsets
+            .map { plan.date.addingTimeInterval($0) }
+            .filter { $0 > now }
+            .sorted()
 
-        let triggerComponents = Calendar.current.dateComponents([.year,.month,.day,.hour,.minute,.second],
-                                                                from: triggerDate)
-        let trigger = UNCalendarNotificationTrigger(dateMatching: triggerComponents, repeats: false)
+        let toSchedule = Array(future.prefix(maxPendingPeriOS))
 
-        let request = UNNotificationRequest(
-            identifier: "event_reminder_\(plan.id)",
-            content: content,
-            trigger: trigger
-        )
-        center.add(request)
+        for (idx, fire) in toSchedule.enumerated() {
+            var triggerDate = fire
+            if triggerDate.timeIntervalSince(now) < 5 {
+                // useful while testing: avoid immediate drop on next runloop
+                triggerDate = now.addingTimeInterval(5)
+            }
+
+            let content = UNMutableNotificationContent()
+            content.title = "Upcoming Event: \(plan.name)"
+            content.body = "Get ready! Your event is on \(formatted(plan.date)). Tap to check your list."
+            content.sound = .default
+            content.userInfo = ["eventPlanID": plan.id.uuidString]
+            content.categoryIdentifier = "EVENT_REMINDER"
+
+            let comps = Calendar.current.dateComponents([.year,.month,.day,.hour,.minute,.second], from: triggerDate)
+            let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
+            let id = "event_reminder_\(plan.id.uuidString)_\(idx)"
+
+            center.add(UNNotificationRequest(identifier: id, content: content, trigger: trigger))
+        }
+
+        // Optional debug: uncomment to inspect what’s pending
+        /*
+        center.getPendingNotificationRequests { reqs in
+            let prefix = "event_reminder_\(plan.id.uuidString)_"
+            let mine = reqs.filter { $0.identifier.hasPrefix(prefix) }
+            print("Scheduled \(mine.count) reminders for plan \(plan.id)")
+            mine.forEach {
+                let when = ( $0.trigger as? UNCalendarNotificationTrigger )?.nextTriggerDate() ?? .distantPast
+                print(" • \($0.identifier) @ \(when)")
+            }
+        }
+        */
     }
 
-    
     static func formatted(_ date: Date) -> String {
         let fmt = DateFormatter()
         fmt.dateStyle = .medium

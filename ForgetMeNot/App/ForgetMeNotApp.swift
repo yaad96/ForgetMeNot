@@ -5,6 +5,7 @@ import UIKit
 
 @main
 struct ForgetMeNotApp: App {
+    // SwiftData container (unchanged)
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             EventPlan.self,
@@ -16,20 +17,18 @@ struct ForgetMeNotApp: App {
     }()
 
     init() {
-        // ✅ Make sure taps on notifications are routed to your singleton
-        UNUserNotificationCenter.current().delegate = NotificationRouter.shared
-
-        // Your existing permission request
-        UNUserNotificationCenter.current()
-            .requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
-                print("Notification permission granted: \(granted)")
-            }
+        // One line does it all: sets UNUserNotificationCenter.delegate,
+        // registers categories, and requests permission.
+        NotificationRouter.shared.configure()
     }
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .modelContainer(sharedModelContainer)
+                // Optional, but useful if you want to react to taps
+                // on notifications inside your view layer:
+                .environmentObject(NotificationRouter.shared)
         }
     }
 }

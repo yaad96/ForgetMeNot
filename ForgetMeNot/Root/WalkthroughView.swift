@@ -30,7 +30,7 @@ struct WalkthroughView: View {
                             "Pause and resume as needed. Stop when you are done.",
                             "Edit the transcript then tap Generate Smart Event or Smart Plan."
                         ],
-                        tip: "Say constraints in the prompt, example, hotel under 120 dollars near Midtown."
+                        tip: "Say constraints in the prompt, example, book hotel under 120 dollars near Midtown."
                     )
 
                     FeatureSection(
@@ -38,7 +38,7 @@ struct WalkthroughView: View {
                         title: "Smart from Calendar",
                         bullets: [
                             "Grant Calendar access in Settings.",
-                            "Pick an event and tap Make Smart Plan.",
+                            "Pick an event and tap Generate Smart Plan.",
                             "Event title, date, reminder dates, tasks are automatically generated via AI."
                         ],
                         tip: "You can also create event from calendar manually"
@@ -49,6 +49,7 @@ struct WalkthroughView: View {
                         title: "Tasks",
                         bullets: [
                             "Auto created from speech, calendars and plans, or add manually.",
+                            "Attach a photo with the task so that you remember exactly which mug you wanna take for the plane",
                             "Set due date, reminders for all the tasks",
                             "Mark done to tasks."
                         ],
@@ -93,7 +94,8 @@ struct WalkthroughView: View {
                         bullets: [
                             "Allow notifications in iOS Settings.",
                             "Each event can have a reminder by time.",
-                            "Remind me of the tasks in ten minutes, one hour, or tomorrow."
+                            "Make reminders incessant by repeating how many times you want.",
+                            "Remind me of the tasks in every ten minutes, one hour, or just remind me once, tomorrow."
                         ]
                     )
 
