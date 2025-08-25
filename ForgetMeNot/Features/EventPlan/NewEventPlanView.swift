@@ -37,6 +37,9 @@ struct NewEventPlanView: View {
         _eventDate = State(initialValue: eventDate)
         _reminderDate = State(initialValue: reminderDate)
         _tasks = State(initialValue: tasks)
+        _customReminderInstant = State(initialValue: reminderDate)
+        _recurringReminderEndDate = State(initialValue: eventDate)
+
     }
 
     @Environment(\.dismiss) private var dismiss
@@ -79,24 +82,286 @@ struct NewEventPlanView: View {
 
     var onDone: (EventPlan?) -> Void
 
-    // --- Small helper to avoid solver churn on partial ranges
+    // =========================
+    // Recurring reminder states
+    // =========================
+    enum IntervalUnit: String, CaseIterable, Identifiable {
+        case seconds, minutes, hours
+        var id: Self { self }
+        var seconds: TimeInterval {
+            switch self {
+            case .seconds: return 1
+            case .minutes: return 60
+            case .hours:   return 3600
+            }
+        }
+        var label: String { switch self { case .seconds: return "sec"; case .minutes: return "min"; case .hours: return "hr" } }
+    }
+
+    @State private var makeRecurring: Bool = false
+    @State private var scheduledReminderDates: [Date] = []     // preview list for “Will Schedule”
+    @State private var everyNumber: String = "1"
+    @State private var everyUnit: IntervalUnit = .hours
+
+    @State private var customReminderInstant: Date = .now      // date+time picker for single add
+    // End date for the recurring series, defaults to eventDate
+    @State private var recurringReminderEndDate: Date = .now.addingTimeInterval(86400)
+
+    // Treat reminderDate as the series start for clarity
+    private var recurringReminderStartDate: Date { reminderDate }
+
+    /// Upper bound for the recurring series (custom reminders ignore this and use eventDate)
+    private var seriesUpperBound: Date { min(eventDate, recurringReminderEndDate) }
+
+
+    // MARK: - Small helpers
+
+    // Only for the recurring series
+    private func clampToSeriesWindow(_ date: Date) -> Date? {
+        let now = Date()
+        if date < now { return nil }
+        if date > seriesUpperBound { return nil }   // <= min(eventDate, recurringEnd)
+        return date
+    }
+
+    // For custom one-off reminders (independent of recurring end)
+    private func clampToEventWindow(_ date: Date) -> Date? {
+        let now = Date()
+        if date < now { return nil }
+        if date > eventDate { return nil }          // <= eventDate only
+        return date
+    }
+
+
+
+    private func addIntervalSeries() {
+        guard let n = Int(everyNumber), n > 0 else { return }
+        let step = TimeInterval(n) * everyUnit.seconds
+        if !makeRecurring { makeRecurring = true }
+
+        var out: [Date] = scheduledReminderDates
+        var cursor = reminderDate
+        let now = Date()
+        if cursor < now {
+            let delta = now.timeIntervalSince(cursor)
+            let jumps = ceil(delta / step)
+            cursor = cursor.addingTimeInterval(jumps * step)
+        }
+        while cursor <= seriesUpperBound {
+            if let ok = clampToSeriesWindow(cursor) { out.append(ok) }
+            cursor = cursor.addingTimeInterval(step)
+            if out.count >= 100 { break }
+        }
+
+
+        scheduledReminderDates = normalizedUpcoming(out)
+    }
+
+
+    private func addCustomInstant() {
+        if let ok = clampToEventWindow(customReminderInstant) {
+            if !makeRecurring { makeRecurring = true }
+            var out = scheduledReminderDates
+            if out.isEmpty, let base = clampToEventWindow(reminderDate) {
+                out.append(base)
+            }
+            out.append(ok)
+            scheduledReminderDates = normalizedUpcoming(out)
+        }
+    }
+
+
+
+
+    private func removeInstant(_ date: Date) {
+        scheduledReminderDates.removeAll { abs($0.timeIntervalSince1970 - date.timeIntervalSince1970) < 0.5 }
+    }
+    
+    // 1) Add this helper somewhere in the view (e.g., near other helpers)
+    private var customPickerSafeRange: ClosedRange<Date> {
+        let now = Date()
+        return eventDate >= now ? now...eventDate : now...now
+    }
+
+
+    
+    // Keep the list clean, future-only, within event window, unique, sorted, and capped to 100
+    private func normalizedUpcoming(_ dates: [Date]) -> [Date] {
+        let now = Date()
+        let uniqKeys = Set(dates.map { $0.timeIntervalSinceReferenceDate })
+        let uniqDates = uniqKeys.map { Date(timeIntervalSinceReferenceDate: $0) }
+
+        let filtered = uniqDates.filter { $0 >= now && $0 <= eventDate } // <- eventDate
+        let sorted = filtered.sorted()
+        return Array(sorted.prefix(100))
+    }
+
+
+    
+    private var reminderDateLine: String {
+        "Start at reminder date: \(recurringReminderStartDate.formatted(date: .abbreviated, time: .shortened)), repeats until \(recurringReminderEndDate.formatted(date: .abbreviated, time: .shortened))"
+    }
+
+
+
+    // --- Small helper to keep ForEach closures tiny
     @ViewBuilder
     private func ReminderSection() -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Reminder")
-                .font(.system(size: 15, weight: .semibold))
+            Toggle(isOn: $makeRecurring) {
+                Label("Add Reminders", systemImage: "arrow.triangle.2.circlepath")
+            }
+            .padding(.top, 6)
+
+            if makeRecurring {
+                RecurringControls()
+            }
+        }
+    }
+
+
+    @ViewBuilder
+    private func RecurringControls() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+
+            // Top title
+            Text("Reminders")
+                .font(.headline)
+
+            Divider().padding(.vertical, 2)
+
+            // Recurring
+            Text("Recurring Reminders")
+                .font(.footnote.weight(.semibold))
                 .foregroundColor(.secondary)
-            let upper = eventDate
+
+            // Start
+            Text("Reminder Start Date")
+                .font(.footnote.weight(.semibold))
+                .foregroundColor(.secondary)
+
             DatePicker(
                 "",
                 selection: $reminderDate,
-                in: ...upper,
+                in: ...recurringReminderEndDate,    // keep start <= end
                 displayedComponents: [.date, .hourAndMinute]
             )
             .labelsHidden()
             .datePickerStyle(.compact)
+
+            // Interval builder
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Remind me after every")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundColor(.secondary)
+
+                HStack(spacing: 8) {
+                    TextField("Number", text: $everyNumber)
+                        .keyboardType(.numberPad)
+                        .frame(width: 80)
+                        .textFieldStyle(.roundedBorder)
+
+                    Picker("", selection: $everyUnit) {
+                        ForEach(IntervalUnit.allCases) { u in
+                            Text(u.label).tag(u)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+
+                Text(reminderDateLine)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            // End
+            Text("Reminder End Date")
+                .font(.footnote.weight(.semibold))
+                .foregroundColor(.secondary)
+
+            DatePicker(
+                "",
+                selection: $recurringReminderEndDate,
+                in: recurringReminderStartDate...eventDate,   // keep end within event
+                displayedComponents: [.date, .hourAndMinute]
+            )
+            .labelsHidden()
+            .datePickerStyle(.compact)
+
+            // Big action button
+            Button {
+                addIntervalSeries()
+            } label: {
+                Label("Set Reminder Series", systemImage: "calendar.badge.plus")
+                    .font(.system(size: 16, weight: .semibold))
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .padding(.top, 6)
+
+            Divider().padding(.vertical, 2)
+
+            // Custom reminder adding UI
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Or add a custom date & time")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundColor(.secondary)
+
+                HStack(spacing: 8) {
+                    DatePicker(
+                        "",
+                        selection: $customReminderInstant,
+                        in: customPickerSafeRange,
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
+                    .labelsHidden()
+                    .datePickerStyle(.compact)
+
+                    Button { addCustomInstant() } label: {
+                        Label("Add Time", systemImage: "plus.circle.fill")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(customPickerSafeRange.lowerBound == customPickerSafeRange.upperBound)
+                }
+
+                if customPickerSafeRange.lowerBound == customPickerSafeRange.upperBound {
+                    Text("Event date is in the past. Move the event to a future time to add reminders.")
+                        .font(.caption)
+                        .foregroundColor(.red)
+                }
+            }
+
+            // Preview
+            if !scheduledReminderDates.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Will Schedule")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundColor(.secondary)
+
+                    ForEach(scheduledReminderDates, id: \.timeIntervalSinceReferenceDate) { d in
+                        HStack(spacing: 8) {
+                            Image(systemName: "bell")
+                                .foregroundColor(.accentColor)
+                            Text(d.formatted(date: .abbreviated, time: .shortened))
+                                .font(.callout)
+                            Spacer()
+                            Button {
+                                removeInstant(d)
+                            } label: {
+                                Image(systemName: "minus.circle.fill")
+                                    .foregroundColor(.red)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.vertical, 3)
+                    }
+                }
+            }
         }
+        .transition(.opacity.combined(with: .move(edge: .top)))
     }
+
 
     // --- Extracted row to keep ForEach closure tiny (same UI)
     @ViewBuilder
@@ -197,7 +462,7 @@ struct NewEventPlanView: View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 22) {
                 // PLAN DETAILS CARD
-                VStack(spacing: 17) {
+                VStack(alignment:.leading, spacing: 17) {
                     // Plan Name
                     PlanTitleField($planName)
 
@@ -209,6 +474,7 @@ struct NewEventPlanView: View {
                             .labelsHidden()
                             .datePickerStyle(.compact)
                     }
+
                     ReminderSection()
                 }
                 .padding()
@@ -314,6 +580,52 @@ struct NewEventPlanView: View {
                 }
             }
         }
+        .onChange(of: eventDate) { _ in
+            // keep end <= event
+            if recurringReminderEndDate > eventDate { recurringReminderEndDate = eventDate }
+
+            // keep custom picker within safe range
+            let r = customPickerSafeRange
+            if customReminderInstant < r.lowerBound { customReminderInstant = r.lowerBound }
+            if customReminderInstant > r.upperBound { customReminderInstant = r.upperBound }
+
+            // keep single reminder date <= event date
+            if reminderDate > eventDate { reminderDate = eventDate }
+
+            // re-normalize preview list under new bounds
+            scheduledReminderDates = normalizedUpcoming(scheduledReminderDates)
+        }
+        
+        // If start moves past end, push end up to start. Then re-normalize.
+        .onChange(of: reminderDate) { newStart in
+            if recurringReminderEndDate < newStart {
+                recurringReminderEndDate = newStart
+            }
+            scheduledReminderDates = normalizedUpcoming(scheduledReminderDates)
+        }
+
+        // If end moves earlier, clamp custom picker and re-normalize
+        .onChange(of: recurringReminderEndDate) { _ in
+            let r = customPickerSafeRange
+            if customReminderInstant > r.upperBound { customReminderInstant = r.upperBound }
+            scheduledReminderDates = normalizedUpcoming(scheduledReminderDates)
+        }
+
+
+
+        .onChange(of: makeRecurring) { on in
+            if on {
+                if scheduledReminderDates.isEmpty,
+                   let base = clampToEventWindow(reminderDate) {
+                    scheduledReminderDates = [base]
+                }
+            } else {
+                scheduledReminderDates.removeAll()
+            }
+        }
+
+
+
         .sheet(item: $activeImagePickerSheet) { source in
             FMNImagePicker(sourceType: source == .camera ? .camera : .photoLibrary) { img in
                 if let img = img { imageToLift = img }
@@ -336,8 +648,6 @@ struct NewEventPlanView: View {
                 onFinish: { url in didFinishTaskRecording(url: url) },
                 onCancel: { showTaskVoiceSheet = false },
                 voiceFeatureTitle: "Add Task From Voice"
-                
-                // keep signature minimal; add extra params only if your sheet supports them
             )
         }
         // Transcription progress
@@ -392,12 +702,48 @@ struct NewEventPlanView: View {
             dismiss()
             return
         }
-        let reminderOffset: TimeInterval = reminderDate.timeIntervalSince(eventDate)
-        let plan = EventPlan(name: planName, date: eventDate, tasks: cleanTasks, reminderOffset: reminderOffset)
+
+        // --- Build the dates to schedule ---
+        let dates0 = normalizedUpcoming(scheduledReminderDates)
+
+        let dates: [Date]
+        if makeRecurring {
+            if dates0.isEmpty {
+                if let base = clampToEventWindow(reminderDate) {
+                    dates = [base]
+                } else {
+                    dates = []
+                }
+            } else {
+                dates = dates0
+            }
+        } else {
+            if let base = clampToEventWindow(reminderDate) {
+                dates = [base]
+            } else {
+                dates = []
+            }
+        }
+
+        let offsetsAll = dates.map { $0.timeIntervalSince(eventDate) }.sorted()
+        let offsets = Array(offsetsAll.prefix(64)) // optional safety cap
+
+        // Create and persist the plan
+        let plan = EventPlan(
+            name: planName,
+            date: eventDate,
+            tasks: cleanTasks,
+            reminderOffset: offsets.first ?? -3600, // legacy field fallback
+            reminderOffsets: offsets
+        )
         modelContext.insert(plan)
-        NotificationHelper.scheduleEventReminder(for: plan, offset: reminderOffset)
+
+        // Schedule
+        NotificationHelper.scheduleEventReminders(for: plan, offsets: offsets)
+
         onDone(plan)
     }
+
 
     private func cancel() {
         onDone(nil)

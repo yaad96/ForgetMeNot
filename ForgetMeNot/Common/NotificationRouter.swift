@@ -12,32 +12,44 @@ import Combine
 
 final class NotificationRouter: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
     static let shared = NotificationRouter()
-
     @Published var pendingPlanID: UUID?
 
     private override init() { super.init() }
 
-    // Called when user taps a delivered notification
-    func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                didReceive response: UNNotificationResponse,
-                                withCompletionHandler completionHandler: @escaping () -> Void) {
-        if let idStr = response.notification.request.content.userInfo["eventPlanID"] as? String,
-           let id = UUID(uuidString: idStr) {
-            DispatchQueue.main.async {
-                self.pendingPlanID = id
-            }
+    func configure() {
+        let center = UNUserNotificationCenter.current()
+        center.delegate = self
+
+        // Category for future actions
+        let cat = UNNotificationCategory(
+            identifier: "EVENT_REMINDER",
+            actions: [],
+            intentIdentifiers: [],
+            options: [.customDismissAction]
+        )
+        center.setNotificationCategories([cat])
+
+        center.requestAuthorization(options: [.alert, .badge, .sound]) { granted, err in
+            print("Notifications auth granted:", granted, "error:", err?.localizedDescription ?? "nil")
         }
-        completionHandler()
     }
 
-    // Optional, show banner when foreground
+    // Foreground banners
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 willPresent notification: UNNotification,
                                 withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         completionHandler([.banner, .sound])
     }
 
-    func configureAsDelegate() {
-        UNUserNotificationCenter.current().delegate = self
+    // Tap routing
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                didReceive response: UNNotificationResponse,
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        if let idStr = response.notification.request.content.userInfo["eventPlanID"] as? String,
+           let id = UUID(uuidString: idStr) {
+            DispatchQueue.main.async { self.pendingPlanID = id }
+        }
+        completionHandler()
     }
 }
+
