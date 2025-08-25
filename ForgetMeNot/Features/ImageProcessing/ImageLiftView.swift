@@ -14,7 +14,7 @@ struct ImageLiftView: View {
             GeometryReader { geo in
                 VStack(spacing: 0) {
                     // Larger, more readable instruction
-                    Text("🖐️ Long-press to extract subject\n📸 Tap below to save full image")
+                    Text("🖐️ Long-press to extract subject\n📸 or Tap below to use full image")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(.white.opacity(0.91))
                         .multilineTextAlignment(.center)
@@ -43,7 +43,7 @@ struct ImageLiftView: View {
                     Button {
                         onSubjectCopied(uiImage)
                     } label: {
-                        Label("Store Full Image", systemImage: "photo.on.rectangle")
+                        Label("Use Full Image", systemImage: "photo.on.rectangle")
                             .font(.system(size: 19, weight: .semibold))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 18)

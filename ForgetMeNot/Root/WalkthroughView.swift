@@ -17,9 +17,20 @@ struct WalkthroughView: View {
                 VStack(alignment: .leading, spacing: 20) {
 
                     HeroCard(
-                        title: "Never4Get",
-                        subtitle: "Speak. Plan. Act.",
-                        detail: "Turn a short voice note into a smart travel plan with tasks, reminders, and attachments."
+                        title: "Unforget",
+                        subtitle: "Snap. Speak. Plan. Act.",
+                        detail: "Turn a photo or voice note into a smart travel plan with tasks, reminders, and attachments."
+                    )
+                    
+                    FeatureSection(
+                        icon: "photo.circle.fill",
+                        title: "Photo to Plan",
+                        bullets: [
+                            "Take a photo or choose from gallery of flyers, posters, leaflet, chat screenshot. AI will create an event with event date, reminders, and necessary tasks from it",
+                            "You can use camera or gallery to choose a photo",
+                            "AI takes care of the rest"
+                        ],
+                        tip: "We use SOTA AI to create smart events from photo"
                     )
 
                     FeatureSection(

@@ -79,7 +79,7 @@ struct AllUpcomingView: View {
             // Spinner overlay
             if isGeneratingPlan {
                 Color.black.opacity(0.07).ignoresSafeArea()
-                ProgressView("Generating plan with ChatGPT…")
+                ProgressView("Generating plan with AI…")
                     .padding(20)
                     .background(.ultraThinMaterial)
                     .cornerRadius(16)
