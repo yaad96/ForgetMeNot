@@ -24,12 +24,141 @@ struct ContentView: View {
     @State private var showWalkthrough = false
     
     @StateObject private var router = NotificationRouter.shared
+    
+    //Photo-to-plan
+    @StateObject private var photoVM = PhotoToPlanViewModel(apiKey: APIKeyLoader.openAIKey) // :contentReference[oaicite:15]{index=15}
+
+    @State private var showPhotoSourcePicker = false
+    @State private var activePhotoPicker: ImagePickerSheet?
+
+    
+    // MARK: - Action tile button style
+
+    struct ActionTileStyle: ButtonStyle {
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+                .shadow(color: .black.opacity(configuration.isPressed ? 0.08 : 0.15),
+                        radius: configuration.isPressed ? 6 : 12, y: 5)
+                .animation(.spring(response: 0.28, dampingFraction: 0.85), value: configuration.isPressed)
+        }
+    }
+
+    // MARK: - Single tile
+
+    struct ActionTile: View {
+        let title: String
+        let systemImage: String
+        let gradient: [Color]
+        let action: () -> Void
+
+        var body: some View {
+            Button(action: action) {
+                VStack(alignment: .leading, spacing: 10) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(.ultraThinMaterial)
+                            .opacity(0.2)
+                            .frame(width: 44, height: 44)
+
+                        Image(systemName: systemImage)
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .shadow(radius: 4, y: 1)
+                            .accessibilityHidden(true)
+                            .padding(5)
+                    }
+                    .padding(.top, 8)  // ⬅️ pushes the icon down from the top edge
+
+                    Text(title)
+                        .font(.system(.headline, design: .rounded))
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.9)
+
+                    Spacer(minLength: 0)
+                }
+                .frame(height: 50)
+                .frame(maxWidth: .infinity)
+                .padding(14)
+                .background(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(
+                            LinearGradient(colors: gradient,
+                                           startPoint: .topLeading,
+                                           endPoint: .bottomTrailing)
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(.white.opacity(0.15), lineWidth: 1)
+                )
+                .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .accessibilityLabel(Text(title))
+            }
+            .buttonStyle(ActionTileStyle())
+        }
+    }
+
+    // MARK: - Section with 4 tiles
+
+    struct CreatePlanFromSection: View {
+        let onPhoto: () -> Void
+        let onSpeech: () -> Void
+        let onCalendar: () -> Void
+        let onManual: () -> Void
+
+        // Adaptive layout: 2 columns on phones, more on wider screens
+        private var columns: [GridItem] {
+            [GridItem(.adaptive(minimum: 150, maximum: 240), spacing: 12, alignment: .top)]
+        }
+
+        var body: some View {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Text("Create plan from")
+                        .font(.title3.weight(.semibold))
+                    Spacer()
+                }
+                .padding(.horizontal, 4)
+
+                LazyVGrid(columns: columns, spacing: 12) {
+                    ActionTile(
+                        title: "Photo",
+                        systemImage: "photo.circle.fill",
+                        gradient: [Color.purple, Color.pink.opacity(0.85)]
+                    ) { onPhoto() }
+
+                    ActionTile(
+                        title: "Speech",
+                        systemImage: "waveform.circle.fill",
+                        gradient: [Color.orange, Color.red.opacity(0.85)]
+                    ) { onSpeech() }
+
+                    ActionTile(
+                        title: "Calendar",
+                        systemImage: "calendar",
+                        gradient: [Color.indigo, Color.blue.opacity(0.85)]
+                    ) { onCalendar() }
+
+                    ActionTile(
+                        title: "Manual",
+                        systemImage: "plus.square.on.square",
+                        gradient: [Color.green, Color.teal.opacity(0.85)]
+                    ) { onManual() }
+                }
+            }
+            .padding(.vertical, 8)
+        }
+    }
+
+
 
     
     @ViewBuilder
     private var generatingOverlay: some View {
         Color.black.opacity(0.07).ignoresSafeArea()
-        ProgressView("Organizing plan with ChatGPT…")
+        ProgressView("Generating plan with AI…")
             .padding(20)
             .background(.ultraThinMaterial)
             .cornerRadius(16)
@@ -42,12 +171,12 @@ struct ContentView: View {
             VStack(spacing: 0) {
                 // Header Card
                 VStack(spacing: 4) {
-                    Text("🧳Never4Get🧳")
+                    Text("Unforget")
                         .font(.system(size: 28, weight: .bold))
                         .foregroundColor(.accentColor)
                         .shadow(color: .accentColor.opacity(0.04), radius: 2, y: 1)
                         .padding(.bottom, 2)
-                    Text("Let your iPhone remember everything!")
+                    Text("Let your iPhone remember everything.")
                         .foregroundColor(.secondary)
                         .font(.system(size: 14, weight: .medium))
                         .multilineTextAlignment(.center)
@@ -63,83 +192,16 @@ struct ContentView: View {
                 .padding(.top, 22)
 
                 // Sleek Modern Buttons
-                HStack(spacing: 10) {
-                    Button {
-                        navPath.append(AppNav.newPlan)
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "plus.circle.fill")
-                            Text("New Event")
-                        }
-                        .font(.system(size: 16, weight: .semibold))
-                        .padding(.vertical, 10)
-                        .padding(.horizontal, 18)
-                        .background(
-                            Capsule()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color.accentColor.opacity(0.15), Color.blue.opacity(0.12)],
-                                        startPoint: .topLeading, endPoint: .bottomTrailing
-                                    )
-                                )
-                        )
-                    }
-                    .foregroundColor(.accentColor)
-                    .buttonStyle(.plain)
-
-                    Button {
-                        navPath.append(AppNav.allUpcoming)
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "rectangle.stack")
-                            Text("From Calendar")
-                        }
-                        .font(.system(size: 16, weight: .semibold))
-                        .padding(.vertical, 10)
-                        .padding(.horizontal, 18)
-                        .background(
-                            Capsule()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color.blue.opacity(0.14), Color.accentColor.opacity(0.13)],
-                                        startPoint: .topLeading, endPoint: .bottomTrailing
-                                    )
-                                )
-                        )
-                    }
-                    .foregroundColor(.accentColor)
-                    .buttonStyle(.plain)
-                }
-                .padding(.top, 14)
-                .padding(.horizontal, 18)
-
-                // Voice Button Row (Talk-to-Plan)
-                HStack(spacing: 10) {
-                    Button {
-                        vm.onTapVoice()
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "mic.circle.fill")
-                            Text("Voice to Event")
-                        }
-                        .font(.system(size: 16, weight: .semibold))
-                        .padding(.vertical, 10)
-                        .padding(.horizontal, 18)
-                        .background(
-                            Capsule()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color.blue.opacity(0.14), Color.accentColor.opacity(0.13)],
-                                        startPoint: .topLeading, endPoint: .bottomTrailing
-                                    )
-                                )
-                        )
-                    }
-                    .foregroundColor(.accentColor)
-                    .buttonStyle(.plain)
-                }
+                
+                CreatePlanFromSection(
+                    onPhoto: { showPhotoSourcePicker = true },
+                    onSpeech: { vm.onTapVoice() },
+                    onCalendar: { navPath.append(AppNav.allUpcoming) },
+                    onManual: { navPath.append(AppNav.newPlan) }
+                )
+                .padding(.horizontal, 16)
                 .padding(.top, 4)
-                .padding(.horizontal, 18)
+
 
                 // Sections
                 let incompletePlans: [EventPlan] = plans.filter { !$0.isCompleted }
@@ -202,8 +264,8 @@ struct ContentView: View {
             }
         }
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
-        .blur(radius: vm.isGeneratingPlan ? 2 : 0)
-        .disabled(vm.isGeneratingPlan)
+        .blur(radius: vm.isGeneratingPlan || photoVM.isGenerating ? 2 : 0)
+        .disabled(vm.isGeneratingPlan || photoVM.isGenerating)
     }
     
     private struct WalkthroughButton: View {
@@ -231,6 +293,60 @@ struct ContentView: View {
             .accessibilityLabel("Open walkthrough")
         }
     }
+    
+    private struct InlineImageSourcePicker: View {
+        var onSourcePicked: (UIImagePickerController.SourceType) -> Void
+        @Environment(\.dismiss) private var dismiss
+
+        private var cameraAvailable: Bool {
+            UIImagePickerController.isSourceTypeAvailable(.camera)
+        }
+
+        var body: some View {
+            VStack(spacing: 16) {
+                Capsule()
+                    .fill(Color.secondary.opacity(0.25))
+                    .frame(width: 40, height: 5)
+                    .padding(.top, 8)
+
+                Text("Attach an Image")
+                    .font(.headline)
+
+                VStack(spacing: 10) {
+                    Button {
+                        guard cameraAvailable else { return }
+                        onSourcePicked(.camera)
+                        dismiss()
+                    } label: {
+                        Label("Take Photo", systemImage: "camera.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .disabled(!cameraAvailable)
+                    .opacity(cameraAvailable ? 1 : 0.5)
+                    .accessibilityHint(cameraAvailable ? "Opens camera" : "Camera not available on this device")
+
+                    Button {
+                        onSourcePicked(.photoLibrary)
+                        dismiss()
+                    } label: {
+                        Label("Choose From Library", systemImage: "photo.fill.on.rectangle.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+
+                    Button("Cancel", role: .cancel) {
+                        dismiss()
+                    }
+                    .padding(.top, 2)
+                }
+            }
+            .padding(20)
+        }
+    }
+
 
 
     var body: some View {
@@ -238,7 +354,7 @@ struct ContentView: View {
             ZStack {
                 Color(.systemBackground).ignoresSafeArea()
                 mainList
-                if vm.isGeneratingPlan { generatingOverlay }
+                if vm.isGeneratingPlan || photoVM.isGenerating { generatingOverlay }
                 
             }
             
@@ -278,6 +394,52 @@ struct ContentView: View {
                     onCancel: { vm.showConfirmTranscript = false }
                 )
             }
+            
+            // Choose camera or gallery
+            .sheet(isPresented: $showPhotoSourcePicker) {
+                InlineImageSourcePicker { source in
+                    activePhotoPicker = (source == .camera ? .camera : .photoLibrary)
+                    // dismiss is handled inside the inline picker
+                }
+                .presentationDetents([.fraction(0.35), .medium])
+                .presentationDragIndicator(.visible)
+            }
+
+
+            // Then pick the actual image
+            .sheet(item: $activePhotoPicker) { which in
+                FMNImagePicker(sourceType: which == .camera ? .camera : .photoLibrary) { img in
+                    if let ui = img {
+                        photoVM.selectedImage = ui
+                        photoVM.showConfirmImage = true
+                    }
+                    activePhotoPicker = nil
+                }
+            }
+            
+            .sheet(isPresented: $photoVM.showConfirmImage) {
+                if let img = photoVM.selectedImage {
+                    PhotoPlanConfirmSheet(
+                        image: img,
+                        onUse: { photoVM.confirmAndGenerate() },
+                        onCancel: {
+                            photoVM.showConfirmImage = false
+                            photoVM.selectedImage = nil
+                        }
+                    )
+                    .interactiveDismissDisabled(photoVM.isGenerating)
+                }
+            }
+
+            .alert("Photo Analysis Failed", isPresented: Binding(
+                get: { photoVM.error != nil },
+                set: { if !$0 { photoVM.error = nil } }
+            )) {
+                Button("OK") { photoVM.error = nil }
+            } message: {
+                Text(photoVM.error ?? "")
+            }
+
 
             // Mic permission alert
             .alert("Microphone Access Needed", isPresented: $vm.showMicDeniedAlert) {
@@ -343,6 +505,24 @@ struct ContentView: View {
                     }
                 }
             }
+            
+            .navigationDestination(isPresented: $photoVM.isNewPlanActive) {
+                NewEventPlanView(
+                    planName: photoVM.pendingPlanName,
+                    eventDate: photoVM.pendingEventDate,
+                    reminderDate: photoVM.pendingReminderDate,
+                    tasks: photoVM.pendingTasks
+                ) { newPlan in
+                    if let plan = newPlan {
+                        navPath.removeLast(navPath.count)
+                        navPath.append(AppNav.planDetail(plan))
+                    } else {
+                        navPath.removeLast(navPath.count)
+                    }
+                }
+            }
+
+            
             .onReceive(router.$pendingPlanID.compactMap { $0 }) { id in
                 // find the plan in your SwiftData query
                 if let plan = plans.first(where: { $0.id == id }) {
