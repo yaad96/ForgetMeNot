@@ -54,7 +54,7 @@ struct ContentView: View {
 
         var body: some View {
             Button(action: action) {
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 4) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 14)
                             .fill(.ultraThinMaterial)
@@ -68,7 +68,7 @@ struct ContentView: View {
                             .padding(5)
 
                     }
-                    .padding(.top, 8)  // ⬅️ pushes the icon down from the top edge
+                    .padding(.top, 20)  // ⬅️ pushes the icon down from the top edge
 
                     Text(title)
                         .font(.system(.headline, design: .rounded))
@@ -79,7 +79,7 @@ struct ContentView: View {
 
                     Spacer(minLength: 0)
                 }
-                .frame(height: 50)
+                .frame(height: 60)
                 .frame(maxWidth: .infinity)
                 .padding(14)
                 .background(
@@ -170,30 +170,33 @@ struct ContentView: View {
     private var mainList: some View {
         ScrollView {
             VStack(spacing: 0) {
-                // Header Card
-                VStack(spacing: 4) {
-                    Text("Unforget")
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(.accentColor)
-                        .shadow(color: .accentColor.opacity(0.04), radius: 2, y: 1)
-                        .padding(.bottom, 2)
-                    Text("Let your iPhone remember everything.")
-                        .foregroundColor(.secondary)
-                        .font(.system(size: 14, weight: .medium))
-                        .multilineTextAlignment(.center)
+                // --- THIS IS THE NEW, CORRECTED HEADER ---
+                VStack(alignment: .center, spacing: 2) {
+                    // 1. Logo and Title side-by-side
+                    HStack(spacing: 6) {
+                        Image("PlanPilotLogo") // Use your logo asset
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 36)
+                            .shadow(color: .black.opacity(0.1), radius: 4, y: 2)
+
+                        Text(Bundle.main.displayName)
+                            .font(.system(.title, design: .serif))
+                            .foregroundStyle(.primary)
+                    }
+
+                    // 2. Subtitle below
+                    Text("Your AI-Powered Life Organizer")
+                        .font(.headline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.secondary)
+                        .padding(.leading, 2) // Small indent to align with text
                 }
-                .padding(.vertical, 18)
-                .padding(.horizontal, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color(.systemBackground).opacity(0.72))
-                        .shadow(color: .accentColor.opacity(0.09), radius: 5, y: 2)
-                )
-                .padding(.horizontal, 14)
-                .padding(.top, 22)
+                .padding(.horizontal, 16)
+                .padding(.top, 26)
+                .padding(.bottom, 8) // Space before the action tiles
 
                 // Sleek Modern Buttons
-                
                 CreatePlanFromSection(
                     onPhoto: { showPhotoSourcePicker = true },
                     onSpeech: { vm.onTapVoice() },
@@ -206,24 +209,35 @@ struct ContentView: View {
 
                 // Sections
                 let incompletePlans: [EventPlan] = plans.filter { !$0.isCompleted }
-                let completedPlans:   [EventPlan] = plans.filter {  $0.isCompleted }
+                let completedPlans:  [EventPlan] = plans.filter {  $0.isCompleted }
 
                 if plans.isEmpty {
                     VStack {
                         Spacer(minLength: 60)
-                        Text("No event plans yet.\nTap Any of the options above to get started.")
-                            .font(.title3.weight(.medium))
-                            .foregroundColor(.gray)
-                            .multilineTextAlignment(.center)
-                            .padding()
+                        ZStack {
+                            Image("PlanPilotLogo") // Use your logo asset again
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 150)
+                                .opacity(0.1)
+                                .rotationEffect(.degrees(-15))
+                            
+                            Text("Your flight deck is clear! ✈️\nCapture your first plan to get started.")
+                                .font(.title3)
+                                .fontWeight(.medium)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                                .padding()
+                        }
+                        Spacer()
                     }
+                    .padding(.top, 40)
                 } else {
                     // Incomplete
                     if !incompletePlans.isEmpty {
-                        SectionHeader(text: "Upcoming Events", systemImage: "clock")
+                        SectionHeader(text: "Upcoming Plans", systemImage: "clock")
                             .padding(.top , 28)
-                            .padding(.bottom, 8)
-                            .padding(.leading, 8)
+                            .padding([.horizontal, .bottom], 8)
                         VStack(spacing: 14) {
                             ForEach(incompletePlans) { plan in
                                 PlanCard(
@@ -243,7 +257,7 @@ struct ContentView: View {
                     if !completedPlans.isEmpty {
                         SectionHeader(text: "Completed", systemImage: "checkmark.seal")
                             .padding(.top, incompletePlans.isEmpty ? 36 : 24)
-                            .padding(.leading, 8)
+                            .padding([.horizontal, .bottom], 8)
                         VStack(spacing: 14) {
                             ForEach(completedPlans) { plan in
                                 PlanCard(

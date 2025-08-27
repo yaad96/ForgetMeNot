@@ -1,10 +1,9 @@
 //
 //  WalkthroughView.swift
-//  ForgetMeNot
+//  PlanPilot
 //
 //  Created by Mainul Hossain on 8/23/25.
 //
-
 
 import SwiftUI
 
@@ -17,129 +16,89 @@ struct WalkthroughView: View {
                 VStack(alignment: .leading, spacing: 20) {
 
                     HeroCard(
-                        title: "Unforget",
-                        subtitle: "Snap. Speak. Plan. Act.",
-                        detail: "Turn a photo or voice note into a smart travel plan with tasks, reminders, and attachments."
+                        title: Bundle.main.displayName,
+                        subtitle: "Your AI-Powered Life Organizer",
+                        detail: "Effortlessly turn photos, voice notes, and calendar events into smart, actionable plans with tasks and reminders."
                     )
-                    
+                     
                     FeatureSection(
                         icon: "photo.circle.fill",
                         title: "Photo to Plan",
                         bullets: [
-                            "Take a photo or choose from gallery of flyers, posters, leaflet, chat screenshot. AI will create an event with event date, reminders, and necessary tasks from it",
-                            "You can use camera or gallery to choose a photo",
-                            "AI takes care of the rest"
+                            "Snap a photo of a flyer, poster, or screenshot.",
+                            "Our AI instantly extracts key details like dates, times, and locations.",
+                            "A complete plan with suggested tasks is created for you in seconds."
                         ],
-                        tip: "We use SOTA AI to create smart events from photo"
+                        tip: "Our powerful AI does the heavy lifting, turning visual clutter into organized clarity."
                     )
 
                     FeatureSection(
                         icon: "mic.fill",
                         title: "Talk to Plan",
                         bullets: [
-                            "Tap Record. Speak naturally about dates, places, budget, and must do items. You can talk about when you need to be reminded, what you need to be reminded etc.",
-                            "Pause and resume as needed. Stop when you are done.",
-                            "Edit the transcript then tap Generate Smart Event or Smart Plan."
+                            "Tap record and describe your plan out loud—mention dates, budgets, and to-dos.",
+                            "Pause and resume recording as new ideas come to mind.",
+                            "Review the transcript, then let our AI generate your smart plan."
                         ],
-                        tip: "Say constraints in the prompt, example, book hotel under 120 dollars near Midtown."
+                        tip: "For best results, add constraints like 'find a hotel under $150 near downtown.'"
                     )
 
                     FeatureSection(
                         icon: "calendar",
                         title: "Smart from Calendar",
                         bullets: [
-                            "Grant Calendar access in Settings.",
-                            "Pick an event and tap Generate Smart Plan.",
-                            "Event title, date, reminder dates, tasks are automatically generated via AI."
+                            "Grant calendar access to unlock a new level of organization.",
+                            "Select an event and let our AI enrich it with relevant, suggested tasks.",
+                            "Turn a simple meeting entry into a fully prepared agenda automatically."
                         ],
-                        tip: "You can also create event from calendar manually"
+                        tip: "Supercharge your existing schedule without any manual entry."
                     )
 
                     FeatureSection(
                         icon: "checkmark.circle",
-                        title: "Tasks",
+                        title: "Intelligent Tasks",
                         bullets: [
-                            "Auto created from speech, calendars and plans, or add manually.",
-                            "Attach a photo with the task so that you remember exactly which mug you wanna take for the plane",
-                            "Set due date, reminders for all the tasks",
-                            "Mark done to tasks."
+                            "Tasks are auto-generated from your plans, or you can add them manually.",
+                            "Attach photos to tasks so you remember exactly what to buy or pack.",
+                            "Feeling lazy? Just talk about the task and we will generate it for you.",
+                            "Set due dates and powerful reminders for everything on your list.",
+                            "Mark tasks as complete and watch your plan's progress."
                         ],
-                        tip: "Marking all tasks as done will get you to complete the event"
+                        tip: "Completing all tasks marks the entire plan as a success!"
                     )
 
                     FeatureSection(
                         icon: "photo.on.rectangle.angled",
-                        title: "Attachments and Subject Lift",
+                        title: "Attachments & Subject Lift",
                         bullets: [
-                            "Attach photos to any task.",
-                            "Lift Subject to isolate tickets or items for quick visual reference.",
-                            "Keep booking proof next to the task."
+                            "Attach booking confirmations, tickets, or receipts directly to tasks.",
+                            "Use 'Subject Lift' to isolate a key item from a photo for quick reference.",
+                            "Keep all your important documents right where you need them."
                         ],
-                        tip: "Use the lifted subject as the task thumbnail."
+                        tip: "A lifted subject makes a perfect, high-visibility thumbnail for your task."
                     )
-
-                    /*FeatureSection(
-                        icon: "wand.and.stars",
-                        title: "Smart Plan Editor",
-                        bullets: [
-                            "Drag to reorder blocks.",
-                            "Edit duration and notes inline.",
-                            "Regenerate suggestions for a section without losing locked items."
-                        ]
-                    )*/
-
-                    /*FeatureSection(
-                        icon: "character.book.closed.fill",
-                        title: "Language and Multilingual input",
-                        bullets: [
-                            "Auto detect is on by default for mixed Bangla and English.",
-                            "Set a primary language in Settings if detection is wrong.",
-                            "Fix names and numbers in the transcript before generating."
-                        ],
-                        tip: "Say dates and times clearly, example, October twelve at five pm."
-                    )*/
                     
                     FeatureSection(
                         icon: "bell.badge",
-                        title: "Notifications",
+                        title: "Powerful Notifications",
                         bullets: [
-                            "Allow notifications in iOS Settings.",
-                            "Each event can have a reminder by time.",
-                            "Make reminders incessant by repeating how many times you want.",
-                            "Remind me of the tasks in every ten minutes, one hour, or just remind me once, tomorrow."
+                            "Enable notifications to stay on track with timely alerts.",
+                            "Every task and event can have custom time-based reminders.",
+                            "For critical items, make reminders 'incessant' until the task is done.",
+                            "Tell the AI your preference: 'Remind me tomorrow at 5 PM' or 'Remind me every 10 minutes.'"
                         ]
                     )
-
-                    /*FeatureSection(
-                        icon: "bell.badge",
-                        title: "Notifications",
-                        bullets: [
-                            "Allow notifications in iOS Settings.",
-                            "Each task can have a reminder by time or location when available.",
-                            "Snooze ten minutes, one hour, or tomorrow."
-                        ]
-                    )*/
 
                     FeatureSection(
                         icon: "lock.shield",
-                        title: "Privacy and data control",
+                        title: "Privacy and Control",
                         bullets: [
-                            "Voice and calendar text are sent to the AI service to create smart plans and tasks.",
-                            "Edit transcripts of events and tasks before sending to the AI service.",
-                        
+                            "Your chosen photo, voice and calendar text are sent to our AI service to generate your plans.",
+                            "Only the photo you choose will be sent to the AI, we do not store your photos or audio recordings.",
+                            "You have full control to edit transcripts before any data is processed.",
+                            "All your plans, tasks, and attachments are stored securely on your device."
                         ]
                     )
-
-                    /*FeatureSection(
-                        icon: "questionmark.circle",
-                        title: "Troubleshooting",
-                        bullets: [
-                            "Wrong language, set a primary language in Settings.",
-                            "Generic plan, add constraints like budget and neighborhoods.",
-                            "Missing photos, check Photos permission for the app.",
-                            "Silent reminders, check iOS notification settings and Focus."
-                        ]
-                    )*/
 
                     FooterCTA()
                 }
@@ -147,6 +106,7 @@ struct WalkthroughView: View {
                 .padding(.bottom, 24)
                 .padding(.top, 8)
             }
+            .background(Color(.systemGroupedBackground)) // Use a grouped background for better card contrast
             .navigationTitle("Feature Walkthrough")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -182,8 +142,8 @@ private struct HeroCard: View {
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.secondary.opacity(0.15)))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.secondary.opacity(0.15)))
     }
 }
 
@@ -194,23 +154,25 @@ private struct FeatureSection: View {
     var tip: String? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) { // Increased spacing for readability
+            HStack(spacing: 12) {
                 Image(systemName: icon)
-                    .font(.system(size: 18, weight: .semibold))
-                    .frame(width: 28, height: 28)
+                    .font(.system(size: 22, weight: .bold)) // Larger, bolder icon
+                    .foregroundStyle(Color.accentColor) // Use a brand accent color
+                    .frame(width: 32, height: 32)
                 Text(title)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.title3.weight(.semibold)) // More prominent title for better hierarchy
             }
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 ForEach(bullets, id: \.self) { line in
-                    HStack(alignment: .top, spacing: 8) {
-                        Text("•")
-                            .font(.system(size: 16, weight: .bold))
-                            .padding(.top, 1)
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "checkmark.circle.fill") // Custom, branded bullet icon
+                            .font(.subheadline)
+                            .foregroundStyle(.green)
+                            .padding(.top, 2)
                         Text(line)
-                            .font(.system(size: 15))
+                            .font(.body)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -219,38 +181,43 @@ private struct FeatureSection: View {
 
             if let tip = tip {
                 HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: "lightbulb")
+                    Image(systemName: "lightbulb.fill") // Filled icon for more emphasis
                         .imageScale(.medium)
+                        .foregroundStyle(.orange)
                     Text(tip)
-                        .font(.system(size: 14))
+                        .font(.caption) // Smaller, distinct font for tips
                         .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(10)
-                .background(Color.secondary.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.orange.opacity(0.1)) // Themed background for the tip
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
-
-            Divider().opacity(0.2)
         }
-        .padding(14)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(16) // Increased padding inside the card
+        .background(Color(.secondarySystemGroupedBackground)) // Card background color
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2) // Subtle shadow for depth
     }
 }
+
 
 private struct FooterCTA: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("One minute demo")
+            Text("Ready for Takeoff?")
                 .font(.system(size: 16, weight: .semibold))
-            Text("Record a short prompt, generate a plan, attach a ticket, and set a reminder. You are done.")
+            Text("Try a one-minute flight plan: Speak a goal, let the AI generate tasks, attach a photo, and set a reminder. You're flying!")
                 .font(.system(size: 14))
                 .foregroundStyle(.secondary)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.secondary.opacity(0.15)))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.secondary.opacity(0.15)))
     }
 }
+
+

@@ -3,6 +3,18 @@ import Foundation
 import UIKit
 import SwiftUI
 
+extension Bundle {
+    var displayName: String {
+        // Prefer localized CFBundleDisplayName, then fall back sensibly
+        localizedInfoDictionary?["CFBundleDisplayName"] as? String ??
+        infoDictionary?["CFBundleDisplayName"] as? String ??
+        localizedInfoDictionary?["CFBundleName"] as? String ??
+        infoDictionary?["CFBundleName"] as? String ??
+        "App"
+    }
+}
+
+
 
 enum ImagePickerSheet: Identifiable {
     case camera, photoLibrary
