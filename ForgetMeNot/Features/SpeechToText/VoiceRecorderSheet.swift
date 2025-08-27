@@ -17,11 +17,11 @@ struct VoiceRecorderSheet: View {
 
     @StateObject private var recorder = VoiceRecorder()
     
-    var voiceFeatureTitle:String = "Create Event and Tasks from Voice"
-    
+    var voiceFeatureTitle = "Talk about your event and to-dos. AI turns them into a solid plan."
+
     var body: some View {
         VStack(spacing: 20) {
-            Capsule().fill(Color.secondary.opacity(0.2)).frame(width: 40, height: 5).padding(.top, 8)
+            //Capsule().fill(Color.secondary.opacity(0.2)).frame(width: 40, height: 5).padding(.top, 8)
 
             Text(voiceFeatureTitle).font(.title3.weight(.semibold))
             Text(recorder.formattedElapsed)

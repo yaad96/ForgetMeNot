@@ -8,10 +8,6 @@ struct PhotoPlanConfirmSheet: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 16) {
-                Capsule()
-                    .fill(Color.secondary.opacity(0.25))
-                    .frame(width: 40, height: 5)
-                    .padding(.top, 8)
 
                 Image(uiImage: image)
                     .resizable()
@@ -41,7 +37,7 @@ struct PhotoPlanConfirmSheet: View {
                 .padding(.horizontal, 16)
                 .padding(.bottom, 12)
             }
-            .navigationTitle("Event from Photo")
+            .navigationTitle("Use this image to create plan")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 // Top-left cancel as an "x" icon

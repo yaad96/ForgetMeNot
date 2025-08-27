@@ -199,10 +199,11 @@ struct NewEventPlanView: View {
 
     
     private var reminderDateLine: String {
-        "Start at reminder date: \(recurringReminderStartDate.formatted(date: .abbreviated, time: .shortened)), repeats until \(recurringReminderEndDate.formatted(date: .abbreviated, time: .shortened))"
+        """
+        Start at reminder date: \(recurringReminderStartDate.formatted(date: .abbreviated, time: .shortened))
+        Repeats until: \(recurringReminderEndDate.formatted(date: .abbreviated, time: .shortened))
+        """
     }
-
-
 
     // --- Small helper to keep ForEach closures tiny
     @ViewBuilder

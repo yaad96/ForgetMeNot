@@ -64,7 +64,10 @@ struct EventPlanDetailView: View {
     private var seriesUpperBound: Date { min(eventDate, recurringReminderEndDate) }
 
     private var reminderDateLine: String {
-        "Start at reminder date: \(recurringReminderStartDate.formatted(date: .abbreviated, time: .shortened)), repeats until \(recurringReminderEndDate.formatted(date: .abbreviated, time: .shortened))"
+        """
+        Start at reminder date: \(recurringReminderStartDate.formatted(date: .abbreviated, time: .shortened))
+        Repeats until: \(recurringReminderEndDate.formatted(date: .abbreviated, time: .shortened))
+        """
     }
 
 

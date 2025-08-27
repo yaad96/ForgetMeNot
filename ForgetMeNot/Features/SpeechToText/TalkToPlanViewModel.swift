@@ -63,7 +63,7 @@ final class TalkToPlanViewModel: ObservableObject {
         isTranscribing = true
         do {
             let text = try await stt.transcribe(fileURL: url)
-            print("OpenAI transcript:", text)
+            //print("OpenAI transcript:", text)
             transcript = text
             showConfirmTranscript = true
         } catch {

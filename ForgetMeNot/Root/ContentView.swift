@@ -60,13 +60,13 @@ struct ContentView: View {
                             .fill(.ultraThinMaterial)
                             .opacity(0.2)
                             .frame(width: 44, height: 44)
+                            .offset(x: systemImage == "calendar" ? 10.75 : 0)
 
                         Image(systemName: systemImage)
                             .font(.system(size: 22, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .shadow(radius: 4, y: 1)
-                            .accessibilityHidden(true)
+                            .offset(x: systemImage == "calendar" ? 10.75 : 0) // ~1 pt is usually enough
                             .padding(5)
+
                     }
                     .padding(.top, 8)  // ⬅️ pushes the icon down from the top edge
 
@@ -75,6 +75,7 @@ struct ContentView: View {
                         .foregroundStyle(.white)
                         .lineLimit(2)
                         .minimumScaleFactor(0.9)
+                        .offset(x: systemImage == "calendar" ? 3.75 : 0)
 
                     Spacer(minLength: 0)
                 }
@@ -210,7 +211,7 @@ struct ContentView: View {
                 if plans.isEmpty {
                     VStack {
                         Spacer(minLength: 60)
-                        Text("No event plans yet.\nTap 'New Event' to get started!")
+                        Text("No event plans yet.\nTap Any of the options above to get started.")
                             .font(.title3.weight(.medium))
                             .foregroundColor(.gray)
                             .multilineTextAlignment(.center)
@@ -304,13 +305,13 @@ struct ContentView: View {
 
         var body: some View {
             VStack(spacing: 16) {
-                Capsule()
-                    .fill(Color.secondary.opacity(0.25))
-                    .frame(width: 40, height: 5)
-                    .padding(.top, 8)
 
-                Text("Attach an Image")
+                Text("Add an event poster, flyer, or leaflet image.")
                     .font(.headline)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)   // shrinks if needed
+                    .allowsTightening(true)
+
 
                 VStack(spacing: 10) {
                     Button {
