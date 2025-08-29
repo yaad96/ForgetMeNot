@@ -18,28 +18,46 @@ struct PlanGeneratorService {
         let nowISO = ISO8601DateFormatter().string(from: Date())
 
         let systemPrompt = """
-        You extract a travel/event plan from user text.
-        Return ONLY strict JSON with fields: "title", "date", "reminder_date", "tasks".
-        - "date" and "reminder_date" must be ISO8601 with timezone offset.
-        - "tasks" is an array of short strings.
-        Use timezone=\(tz) and now=\(nowISO) for relative times.
-        """
+         You extract a single event plan from user text.
+         Return ONLY strict JSON with fields:
+         {
+           "title": string,
+           "date": ISO8601 datetime with timezone,
+           "reminder_date": ISO8601 datetime with timezone,
+           "tasks": [
+             { "title": string, "reminder_at": ISO8601 datetime with timezone or null }
+           ]
+         }
 
-        let userPrompt = """
-        Transcript:
-        \"\"\"\(transcript)\"\"\"\n
-        Output only JSON. No prose. No markdown.
-        """
+         Rules:
+         - Use timezone=\(tz) and now=\(nowISO) for resolving relative phrases.
+         - First infer the event "date". Then resolve any task-level reminder phrases relative to that event date when the phrase depends on it, for example "the night before" or "2 hours before the event".
+         - If a task gets a specific cue like "remind me", "by Tuesday 5pm", "tomorrow morning", "night before", "two hours before flight", set "reminder_at" for that task.
+         - If there is no clear cue for a task, set "reminder_at" = null.
+         - Clamp reminder_at to [now, event date]. If it falls outside, set it to null.
+         - Heuristics for vague times when no clock time is given:
+             "morning" → 09:00, "noon" → 12:00, "afternoon" → 14:00,
+             "evening" → 19:00, "night" → 21:00, "night before" → event_date-1 at 20:00.
+             "by <weekday>" → 17:00 on that weekday unless time is specified.
+             "<X> hours before" → event_date minus X hours.
+         - Output only JSON. No prose, no markdown.
+         """
 
-        let payload: [String: Any] = [
-            "model": model,
-            "response_format": ["type": "json_object"],
-            "temperature": 0.2,
-            "messages": [
-                ["role": "system", "content": systemPrompt],
-                ["role": "user", "content": userPrompt]
-            ]
-        ]
+         let userPrompt = """
+         Transcript:
+         \"\"\"\(transcript)\"\"\"\n
+         Output only JSON. No prose. No markdown.
+         """
+
+         let payload: [String: Any] = [
+             "model": model,
+             "response_format": ["type": "json_object"],
+             "temperature": 0.2,
+             "messages": [
+                 ["role": "system", "content": systemPrompt],
+                 ["role": "user", "content": userPrompt]
+             ]
+         ]
 
         var req = URLRequest(url: url)
         req.httpMethod = "POST"

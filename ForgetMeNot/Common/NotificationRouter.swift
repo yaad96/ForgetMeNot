@@ -15,19 +15,14 @@ final class NotificationRouter: NSObject, ObservableObject, UNUserNotificationCe
     @Published var pendingPlanID: UUID?
 
     private override init() { super.init() }
-
+    
     func configure() {
         let center = UNUserNotificationCenter.current()
         center.delegate = self
 
-        // Category for future actions
-        let cat = UNNotificationCategory(
-            identifier: "EVENT_REMINDER",
-            actions: [],
-            intentIdentifiers: [],
-            options: [.customDismissAction]
-        )
-        center.setNotificationCategories([cat])
+        let eventCat = UNNotificationCategory(identifier: "EVENT_REMINDER", actions: [], intentIdentifiers: [], options: [.customDismissAction])
+        let taskCat  = UNNotificationCategory(identifier: "TASK_REMINDER",  actions: [], intentIdentifiers: [], options: [.customDismissAction])
+        center.setNotificationCategories([eventCat, taskCat])
 
         center.requestAuthorization(options: [.alert, .badge, .sound]) { granted, err in
             print("Notifications auth granted:", granted, "error:", err?.localizedDescription ?? "nil")

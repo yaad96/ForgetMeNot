@@ -82,18 +82,31 @@ final class TalkToPlanViewModel: ObservableObject {
             do {
                 let plan = try await planGen.generate(from: transcript)
                 let iso = ISO8601DateFormatter()
+
                 let event = iso.date(from: plan.date) ?? .now
-                let notif  = iso.date(from: plan.reminder_date) ?? event
+                let notif = iso.date(from: plan.reminder_date) ?? event
+
                 pendingPlanName = plan.title.isEmpty ? "Trip" : plan.title
                 pendingEventDate = event
                 pendingReminderDate = notif
-                pendingTasks = plan.tasks.map { EventTask(title: $0) }
+
+                let now = Date()
+                pendingTasks = plan.tasks.map { t in
+                    let et = EventTask(title: t.title)
+                    if let s = t.reminder_at, let d = iso.date(from: s) {
+                        // clamp to [now, event]
+                        let clamped = min(max(d, now), event)
+                        et.reminderAt = clamped
+                    }
+                    return et
+                }
+
                 isGeneratingPlan = false
                 isNewPlanActive = true
             } catch {
+                // existing fallback
                 print("Chat plan error:", error.localizedDescription)
                 self.error = error.localizedDescription
-                // allow navigation with sane defaults if you like
                 pendingPlanName = "Event"
                 pendingEventDate = .now
                 pendingReminderDate = .now

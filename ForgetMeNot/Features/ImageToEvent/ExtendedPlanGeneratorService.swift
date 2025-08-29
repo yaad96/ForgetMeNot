@@ -20,15 +20,34 @@ extension PlanGeneratorService {
 
         let systemPrompt = """
         You extract a personal travel or event plan from a single photo.
-        Return ONLY strict JSON with fields: "title", "date", "reminder_date", "tasks".
-        - "date" and "reminder_date" must be ISO8601 with timezone offset.
-        - "tasks" is an array of short strings.
-        Use timezone=\(tz) and now=\(nowISO) when the image does not provide an explicit date.
-        Infer intent and vibe from visible cues (posters, menus, tickets, invites, venues, attire).
+        Return ONLY strict JSON with fields:
+        {
+          "title": string,
+          "date": ISO8601 datetime with timezone,
+          "reminder_date": ISO8601 datetime with timezone,
+          "tasks": [
+            { "title": string, "reminder_at": ISO8601 datetime with timezone or null }
+          ]
+        }
+
+        Rules:
+        - Use timezone=\(tz) and now=\(nowISO).
+        - First infer the event "date". Then resolve any task-level reminder phrases relative to that event date when needed,
+          for example "night before", "2 hours before", etc.
+        - If a task has a clear cue like "remind me", "by Tuesday 5pm", "tomorrow morning", "night before", set reminder_at.
+        - If no clear cue, set reminder_at = null.
+        - Clamp reminder_at to [now, event date]. If outside, set to null.
+        - Heuristics when no clock time is given:
+          "morning" → 09:00, "noon" → 12:00, "afternoon" → 14:00,
+          "evening" → 19:00, "night" → 21:00, "night before" → event_date-1 at 20:00,
+          "by <weekday>" → 17:00 that weekday unless a time is specified,
+          "<X> hours before" → event_date minus X hours.
+        - Output only JSON. No prose. No markdown.
         """
 
+
         let userPrompt = """
-        From this photo, infer a suitable event title, an event date, a reminder date before the event, and a short checklist of prep tasks.
+        From this photo, infer a suitable event title, an event date, a reminder date before the event, and a short checklist of prep tasks with appropriate task reminder dates.
         Output only JSON. No prose. No markdown.
         """
 
