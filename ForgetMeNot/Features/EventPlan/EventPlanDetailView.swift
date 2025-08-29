@@ -69,6 +69,12 @@ struct EventPlanDetailView: View {
         Repeats until: \(recurringReminderEndDate.formatted(date: .abbreviated, time: .shortened))
         """
     }
+    
+    @State private var expandedTaskReminderIndex: Int? = nil
+    // at top with other @State
+    @State private var taskReminderDraft: [UUID: Date] = [:]
+
+
 
 
     // MARK: - Helpers
@@ -97,25 +103,45 @@ struct EventPlanDetailView: View {
 
 
     private func addIntervalSeries() {
-        guard let n = Int(everyNumber), n > 0 else { return }
+        // Robust validation with reasonable limits
+        guard let n = Int(everyNumber), n > 0, n <= 1000 else {
+            // Show user feedback for invalid input
+            everyNumber = "1" // Reset to safe default
+            return
+        }
+        
         let step = TimeInterval(n) * everyUnit.seconds
+        
+        // Additional safety: prevent steps smaller than 1 second
+        guard step >= 1.0 else {
+            everyNumber = "1"
+            everyUnit = .minutes
+            return
+        }
+        
         if !makeRecurring { makeRecurring = true }
-
         var out: [Date] = scheduledReminderDates
         var cursor = reminderDate
         let now = Date()
+        
         if cursor < now {
             let delta = now.timeIntervalSince(cursor)
             let jumps = ceil(delta / step)
             cursor = cursor.addingTimeInterval(jumps * step)
         }
-        while cursor <= seriesUpperBound {
+        
+        // Add loop counter as additional safety
+        var loopCounter = 0
+        while cursor <= seriesUpperBound && loopCounter < 500 {
             if let ok = clampToSeriesWindow(cursor) { out.append(ok) }
             cursor = cursor.addingTimeInterval(step)
             if out.count >= 100 { break }
+            loopCounter += 1
         }
+        
         scheduledReminderDates = normalizedUpcoming(out)
     }
+
 
 
     private func addCustomInstant() {
@@ -150,15 +176,19 @@ struct EventPlanDetailView: View {
     
     private func prunePersistedPastRemindersIfNeeded() {
         let now = Date()
-        let pruned = plan.allReminderOffsets
+        // Use plan.reminderOffsets so an intentionally empty list stays empty.
+        let pruned = plan.reminderOffsets
             .filter { plan.date.addingTimeInterval($0) >= now }
             .sorted()
-        // Cap to 100 just to be consistent everywhere
-        let capped = Array(pruned.prefix(100))
-        if capped != plan.reminderOffsets {
-            plan.reminderOffsets = capped
+
+        // Persist pruned list and schedule at most 64
+        let persist = pruned
+        let schedule = Array(pruned.prefix(64))
+
+        if persist != plan.reminderOffsets {
+            plan.reminderOffsets = persist
             NotificationHelper.cancelReminder(for: plan)
-            NotificationHelper.scheduleEventReminders(for: plan, offsets: capped)
+            NotificationHelper.scheduleEventReminders(for: plan, offsets: schedule)
         }
     }
 
@@ -168,6 +198,7 @@ struct EventPlanDetailView: View {
     // MARK: - Tiny helpers to keep the type checker happy
 
     @ViewBuilder
+    
     private func EventDateEditingSection() -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Event Date & Time")
@@ -511,6 +542,7 @@ struct EventPlanDetailView: View {
                     Button {
                         plan.isCompleted = true
                         NotificationHelper.cancelReminder(for: plan)
+                        NotificationHelper.cancelAllTaskReminders(for: plan)
                         showCompletedAlert = true
                     } label: {
                         Text("I'm All Set")
@@ -587,7 +619,7 @@ struct EventPlanDetailView: View {
             Button("OK") { dismiss() }
         }
         .confirmationDialog(
-            "Attach an Image",
+            "Attach a reference photo for this task",
             isPresented: $showImageSourceDialog,
             titleVisibility: .visible
         ) {
@@ -629,6 +661,13 @@ struct EventPlanDetailView: View {
 
             // keep single reminder date <= event date
             if reminderDate > eventDate { reminderDate = eventDate }
+            
+            for i in tasks.indices {
+                if let d = tasks[i].reminderAt, d > eventDate {
+                    tasks[i].reminderAt = eventDate
+                }
+            }
+
 
             scheduledReminderDates = normalizedUpcoming(scheduledReminderDates)
         }
@@ -722,134 +761,317 @@ struct EventPlanDetailView: View {
     // MARK: - Task Row
     @ViewBuilder
     func taskRow(idx: Int, editing: Bool) -> some View {
+        // UI constants aligned with NewEventPlanView
+        let iconSide: CGFloat = 36
+        let iconCorner: CGFloat = 8
+        let sepHeight: CGFloat = 28
+        let controlH: CGFloat = 36
+        let isExpanded = expandedTaskReminderIndex == idx
+
+        // live task reference (don’t mutate when !editing)
         let task = editing ? tasks[idx] : plan.tasks[idx]
-        HStack(alignment: .center, spacing: 10) {
-            Button {
-                if editing {
-                    tasks[idx].isCompleted.toggle()
-                } else if !plan.isCompleted {
-                    plan.tasks[idx].isCompleted.toggle()
-                }
-            } label: {
-                Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundColor(task.isCompleted ? .green : .secondary)
-            }
-            .buttonStyle(.plain)
 
-            Group {
-                if editing {
-                    TextField(
-                        "What to do?",
-                        text: Binding(
-                            get: { tasks[idx].title },
-                            set: { tasks[idx].title = $0 }
-                        )
-                    )
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 10)
-                    .background(Color(.systemGray6).opacity(0.97))
-                    .cornerRadius(8)
-                    .font(.system(size: 15, weight: .regular))
-                } else {
-                    Text(task.title)
-                        .strikethrough(task.isCompleted)
-                        .foregroundColor(task.isCompleted ? .secondary : .primary)
-                        .font(.system(size: 15, weight: .regular))
-                        .padding(.vertical, 8)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            if let id = task.subjectImageID,
-               let subj = subjects.first(where: { $0.id == id }),
-               let thumb = subj.thumbnail {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .center, spacing: 6) {
+                // Completion toggle (kept far-left as before)
                 Button {
                     if editing {
+                        tasks[idx].isCompleted.toggle()
+                    } else if !plan.isCompleted {
+                        plan.tasks[idx].isCompleted.toggle()
+                        let t = plan.tasks[idx]
+                        if t.isCompleted {
+                            NotificationHelper.cancelTaskReminder(for: plan, task: t)
+                        } else if t.reminderAt != nil {
+                            NotificationHelper.scheduleTaskReminder(for: plan, task: t)
+                        }
+                    }
+                } label: {
+                    Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundColor(task.isCompleted ? .green : .secondary)
+                }
+                .buttonStyle(.plain)
+
+                // ——— Packed icon cluster: Image • Mic • Bell ———
+
+                // IMAGE (thumb if present; otherwise show rectangular "add image" ONLY while editing)
+                if let id = task.subjectImageID,
+                   let subj = subjects.first(where: { $0.id == id }),
+                   let thumb = subj.thumbnail {
+                    Button {
+                        if editing {
+                            editingTaskIndex = idx
+                            showImageSourceDialog = true
+                        } else {
+                            showSubjectPreview = subj
+                        }
+                    } label: {
+                        Image(uiImage: thumb)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: iconSide, height: iconSide)
+                            .clipShape(RoundedRectangle(cornerRadius: iconCorner, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: iconCorner)
+                                    .stroke(Color.secondary.opacity(0.15), lineWidth: 1)
+                            )
+                            .shadow(color: Color.black.opacity(0.08), radius: 3, y: 1)
+                    }
+                    .buttonStyle(.plain)
+
+                } else if editing {
+                    Button {
                         editingTaskIndex = idx
                         showImageSourceDialog = true
-                    } else {
-                        showSubjectPreview = subj
+                    } label: {
+                        ZStack {
+                            // rectangular container to match NewEventPlanView
+                            RoundedRectangle(cornerRadius: iconCorner)
+                                .fill(Color(.systemGray5))
+                                .frame(width: iconSide, height: iconSide)
+
+                            Image(systemName: "photo.on.rectangle")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 20, height: 20)
+                                .foregroundColor(.blue.opacity(0.76))
+
+                            // protruding plus in editing mode
+                            Image(systemName: "plus.circle.fill")
+                                .resizable()
+                                .foregroundColor(.accentColor)
+                                .background(Color.white, in: Circle())
+                                .frame(width: 14, height: 14)
+                                .offset(x: 9, y: 9)
+                                .shadow(color: .black.opacity(0.10), radius: 1, x: 1, y: 1)
+                        }
                     }
-                } label: {
-                    Image(uiImage: thumb)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 38, height: 38)
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 5)
-                                .stroke(Color.white.opacity(0.8), lineWidth: 1.1)
+                    .buttonStyle(.plain)
+
+                // NOTE: no placeholder in view mode when there's no image
+                }
+
+                
+
+                if editing {
+                    // vertical separator
+                    Rectangle().fill(Color.secondary.opacity(0.15))
+                        .frame(width: 1, height: sepHeight)
+
+                    // MIC
+                    Button {
+                        editingTaskIndex = idx
+                        onTapTaskVoice()
+                    } label: {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: iconCorner)
+                                .fill(Color(.systemGray5))
+                                .frame(width: iconSide, height: iconSide)
+                            Image(systemName: "mic.fill")
+                                .font(.system(size: 17, weight: .bold))
+                                .foregroundColor(.accentColor)
+                        }
+                    }
+                    .buttonStyle(.plain)
+
+                    // vertical separator
+                    Rectangle().fill(Color.secondary.opacity(0.15))
+                        .frame(width: 1, height: sepHeight)
+
+                    // BELL (stateful plus/check) — opens expander
+                    Button {
+                        withAnimation(.spring()) {
+                            if expandedTaskReminderIndex == idx {
+                                expandedTaskReminderIndex = nil
+                            } else {
+                                expandedTaskReminderIndex = idx
+                                let tid = tasks[idx].id
+                                if taskReminderDraft[tid] == nil {
+                                    taskReminderDraft[tid] = tasks[idx].reminderAt ?? Date().addingTimeInterval(3600)
+                                }
+                            }
+                        }
+                    } label: {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: iconCorner)
+                                .fill(Color(.systemGray5))
+                                .frame(width: iconSide, height: iconSide)
+
+                            Image(systemName: "bell")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 18, height: 18)
+                                .foregroundColor(.accentColor)
+
+                            let hasReminder = tasks[idx].reminderAt != nil
+                            Image(systemName: hasReminder ? "checkmark.circle.fill" : "plus.circle.fill")
+                                .resizable()
+                                .foregroundColor(hasReminder ? .green : .accentColor)
+                                .background(Color.white, in: Circle())
+                                .frame(width: 14, height: 14)
+                                .offset(x: 9, y: 9)
+                                .shadow(color: .black.opacity(0.10), radius: 1, x: 1, y: 1)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                // TEXT FIELD / LABEL (takes the remaining width)
+                Group {
+                    if editing {
+                        TextField(
+                            "What to do?",
+                            text: Binding(
+                                get: { tasks[idx].title },
+                                set: { tasks[idx].title = $0 }
+                            )
                         )
-                        .shadow(color: Color.black.opacity(0.07), radius: 5, y: 1)
-                        .padding(.trailing, 1)
-                }
-                .buttonStyle(.plain)
-            } else if editing {
-                Button {
-                    editingTaskIndex = idx
-                    showImageSourceDialog = true
-                } label: {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(.systemGray5))
-                            .frame(width: 38, height: 38)
-                        Image(systemName: "photo.on.rectangle")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 15, height: 15)
-                            .foregroundColor(.blue.opacity(0.75))
-                        Image(systemName: "plus.circle.fill")
-                            .resizable()
-                            .foregroundColor(.accentColor)
-                            .background(Color.white, in: Circle())
-                            .frame(width: 13, height: 13)
-                            .offset(x: 8, y: 8)
-                            .shadow(color: .black.opacity(0.10), radius: 1, x: 1, y: 1)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 10)
+                        .background(Color(.systemGray6).opacity(0.98))
+                        .cornerRadius(8)
+                        .font(.system(size: 15))
+                    } else {
+                        Text(task.title)
+                            .strikethrough(task.isCompleted)
+                            .foregroundColor(task.isCompleted ? .secondary : .primary)
+                            .font(.system(size: 15))
+                            .padding(.vertical, 8)
                     }
                 }
-                .buttonStyle(.plain)
-                .padding(.trailing, 1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                // REMOVE (editing only)
+                if editing && tasks.count > 1 {
+                    Button {
+                        tasks.remove(at: idx)
+                    } label: {
+                        Image(systemName: "minus.circle.fill")
+                            .foregroundColor(.red)
+                            .font(.system(size: 19, weight: .semibold))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.leading, 2)
+                }
             }
 
-            if editing {
-                Button {
-                    editingTaskIndex = idx
-                    onTapTaskVoice()
-                } label: {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(.systemGray5))
-                            .frame(width: 38, height: 38)
-                        Image(systemName: "mic.fill")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 14, height: 18)
-                            .foregroundColor(.accentColor)
+            // Saved reminder chip (shows in both modes when collapsed)
+            if !isExpanded, let when = (editing ? tasks[idx].reminderAt : task.reminderAt) {
+                HStack(spacing: 6) {
+                    Image(systemName: "bell.and.waves.left.and.right.fill")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 17, height: 17)
+                        .foregroundColor(.accentColor)
+                    Text(when.formatted(date: .abbreviated, time: .shortened))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .padding(.top, 2)
+                .transition(.opacity)
+            }
+
+            // Expander (editing only)
+            if editing && isExpanded {
+                HStack(spacing: 8) {
+                    let tid = tasks[idx].id
+                    let draftBinding = Binding<Date>(
+                        get: { taskReminderDraft[tid] ?? tasks[idx].reminderAt ?? Date().addingTimeInterval(3600) },
+                        set: { taskReminderDraft[tid] = $0 }
+                    )
+
+                    DatePicker(
+                        "",
+                        selection: draftBinding,
+                        in: customPickerSafeRange,        // same safe range as NewEventPlanView
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
+                    .labelsHidden()
+                    .datePickerStyle(.compact)
+                    .frame(height: controlH)
+
+                    // current saved/draft state
+                    let hasReminder = tasks[idx].reminderAt != nil
+                    let isSaved: Bool = {
+                        guard let d = taskReminderDraft[tid], let r = tasks[idx].reminderAt else { return false }
+                        return abs(d.timeIntervalSinceReferenceDate - r.timeIntervalSinceReferenceDate) < 0.5
+                    }()
+                    let isDirty = {
+                        guard let d = taskReminderDraft[tid] else { return false }
+                        // dirty if there is no reminder yet, or the draft differs from saved
+                        guard let r = tasks[idx].reminderAt else { return true }
+                        return abs(d.timeIntervalSinceReferenceDate - r.timeIntervalSinceReferenceDate) >= 0.5
+                    }()
+
+                    // Commit button:
+                    // - If there is NO reminder -> show bell+ (create)
+                    // - If there IS a reminder and draft CHANGED -> show bell+ (update)
+                    // - If there IS a reminder and draft NOT changed -> HIDE commit (only trash remains)
+                    if !hasReminder || isDirty {
+                        Button {
+                            let picked = taskReminderDraft[tid] ?? Date().addingTimeInterval(3600)
+                            tasks[idx].reminderAt = picked
+                            withAnimation(.spring()) { expandedTaskReminderIndex = nil }
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        } label: {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: iconCorner)
+                                    .fill(Color(.systemGray5))
+                                    .frame(width: iconSide, height: iconSide)
+
+                                Image(systemName: "bell")
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 17, height: 17)
+                                    .foregroundColor(.accentColor)
+
+                                
+                                Image(systemName: "plus.circle.fill")
+                                    .resizable()
+                                    .foregroundColor(.green)
+                                    .background(Color.white, in: Circle())
+                                    .frame(width: 12, height: 12)
+                                    .offset(x: 9, y: 9)
+                                    .shadow(color: .black.opacity(0.10), radius: 1, x: 1, y: 1)
+                            }
+                        }
+                        .frame(width: controlH, height: controlH)
+                        .buttonStyle(.plain)
+                    }
+
+                    // Always show Trash when a reminder exists
+                    if hasReminder {
+                        Button {
+                            tasks[idx].reminderAt = nil
+                            taskReminderDraft[tid] = nil
+                            if expandedTaskReminderIndex == idx { expandedTaskReminderIndex = nil }
+                        } label: {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: iconCorner).fill(Color(.systemGray5))
+                                Image(systemName: "trash")
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundColor(.red)
+                            }
+                        }
+                        .frame(width: controlH, height: controlH)
+                        .buttonStyle(.plain)
                     }
                 }
-                .buttonStyle(.plain)
-            }
+                .padding(.top, 2)
+                .transition(.opacity.combined(with: .move(edge: .top)))
 
-            if editing && tasks.count > 1 {
-                Button {
-                    tasks.remove(at: idx)
-                } label: {
-                    Image(systemName: "minus.circle.fill")
-                        .foregroundColor(.red)
-                        .font(.system(size: 19, weight: .semibold))
-                }
-                .buttonStyle(.plain)
-                .padding(.leading, 3)
             }
         }
-        .padding(.vertical, 3)
-        .padding(.horizontal, 10)
-        .background(.ultraThinMaterial)
-        .cornerRadius(8)
-        .shadow(color: Color.black.opacity(0.02), radius: 2, y: 1)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        // Row border to match NewEventPlanView
+        .padding(8)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.secondary.opacity(0.18), lineWidth: 1)
+        )
     }
+
 
     // MARK: - Editing Logic
 
@@ -868,6 +1090,14 @@ struct EventPlanDetailView: View {
 
         tasks = plan.tasks
         customReminderInstant = reminderDate
+        
+        taskReminderDraft = Dictionary(uniqueKeysWithValues:
+            tasks.compactMap { t in
+                if let d = t.reminderAt { return (t.id, d) }
+                return nil
+            }
+        )
+
     }
 
 
@@ -921,16 +1151,18 @@ struct EventPlanDetailView: View {
         // 3) Convert to offsets relative to eventDate (negative = before event)
         let offsetsAll = dates.map { $0.timeIntervalSince(eventDate) }.sorted()
 
-        // 4) (Optional) Trim to a safe cap for iOS pending notifications
         let offsets = Array(offsetsAll.prefix(64))
-
-        // Persist legacy + multi
-        plan.reminderOffset  = offsets.first ?? plan.reminderOffset
         plan.reminderOffsets = offsets
-
-        // Reschedule
+        plan.reminderOffset  = offsets.first ?? 0
         NotificationHelper.cancelReminder(for: plan)
         NotificationHelper.scheduleEventReminders(for: plan, offsets: offsets)
+        
+        // Reschedule task reminders (one per task if set)
+        // Reschedule task reminders deterministically
+        NotificationHelper.cancelAllTaskReminders(for: plan)
+        for t in plan.tasks where t.reminderAt != nil {
+            NotificationHelper.scheduleTaskReminder(for: plan, task: t)
+        }
 
         isEditing = false
         // showSaveAlert = true

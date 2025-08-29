@@ -21,8 +21,14 @@ class EventPlan: Identifiable {
             return (try? JSONDecoder().decode([Double].self, from: blob)) ?? []
         }
         set {
-            reminderOffsetsBlob = try? JSONEncoder().encode(newValue)
+            do {
+                reminderOffsetsBlob = try JSONEncoder().encode(newValue)
+            } catch {
+                print("Failed to encode reminder offsets: \(error)")
+                reminderOffsetsBlob = nil
+            }
         }
+
     }
 
     var isCompleted: Bool = false
@@ -46,8 +52,10 @@ class EventPlan: Identifiable {
 
     /// All reminder offsets, using multi if present, else legacy single.
     var allReminderOffsets: [TimeInterval] {
-        let multi = reminderOffsets
-        return multi.isEmpty ? [reminderOffset] : multi
+        // If multi is present in storage, always honor it, even if empty
+        if reminderOffsetsBlob != nil { return reminderOffsets }
+        // Only fall back to legacy when there was never a multi blob
+        return [reminderOffset]
     }
 }
 
@@ -57,6 +65,7 @@ class EventTask: Identifiable {
     var title: String
     var subjectImageID: UUID?
     var isCompleted: Bool = false
+    var reminderAt: Date? = nil
 
     init(title: String, subjectImageID: UUID? = nil, id: UUID = .init()) {
         self.id = id

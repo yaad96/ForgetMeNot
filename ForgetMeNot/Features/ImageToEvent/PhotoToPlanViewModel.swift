@@ -48,7 +48,15 @@ final class PhotoToPlanViewModel: ObservableObject {
             pendingPlanName = plan.title.isEmpty ? "Event" : plan.title
             pendingEventDate = event
             pendingReminderDate = notif
-            pendingTasks = plan.tasks.map { EventTask(title: $0) }
+            let now = Date()
+            pendingTasks = plan.tasks.map { t in
+                let et = EventTask(title: t.title)
+                if let s = t.reminder_at, let d = ISO8601DateFormatter().date(from: s) {
+                    et.reminderAt = min(max(d, now), event)   // clamp to [now, event]
+                }
+                return et
+            }
+
             isNewPlanActive = true
         } catch {
             self.error = error.localizedDescription

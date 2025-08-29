@@ -34,7 +34,7 @@
 		C83E7E922E4054E700FD616A /* ForgetMeNot */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			explicitFileTypes = {
-				Common/DeepDeleteTravelPlan.swift = sourcecode.swift;
+				Common/DeepDeleteEventPlan.swift = sourcecode.swift;
 			};
 			path = ForgetMeNot;
 			sourceTree = "<group>";
@@ -401,7 +401,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = 7FJQ42BTPU;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -433,7 +433,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = 7FJQ42BTPU;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
