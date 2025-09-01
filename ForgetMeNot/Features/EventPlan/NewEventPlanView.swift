@@ -75,6 +75,12 @@ struct NewEventPlanView: View {
     @State private var lastTaskRecordingURL: URL?
     @State private var showMicDeniedAlert = false
     @State private var voiceError: String?
+    
+    @State private var lastEventAnchor: Date = .now
+    
+    
+
+
 
     // Services
     private let mic = MicPermissionService()
@@ -177,7 +183,7 @@ struct NewEventPlanView: View {
             loopCounter += 1
         }
         
-        scheduledReminderDates = normalizedUpcoming(out)
+        scheduledReminderDates = normalizedClamped(out)
     }
 
 
@@ -190,7 +196,7 @@ struct NewEventPlanView: View {
                 out.append(base)
             }
             out.append(ok)
-            scheduledReminderDates = normalizedUpcoming(out)
+            scheduledReminderDates = normalizedClamped(out)
         }
     }
 
@@ -209,25 +215,74 @@ struct NewEventPlanView: View {
 
 
     
-    // Keep the list clean, future-only, within event window, unique, sorted, and capped to 100
-    private func normalizedUpcoming(_ dates: [Date]) -> [Date] {
-        let now = Date()
-        let uniqKeys = Set(dates.map { $0.timeIntervalSinceReferenceDate })
-        let uniqDates = uniqKeys.map { Date(timeIntervalSinceReferenceDate: $0) }
-
-        let filtered = uniqDates.filter { $0 >= now && $0 <= eventDate } // <- eventDate
-        let sorted = filtered.sorted()
-        return Array(sorted.prefix(100))
-    }
-
-
-    
     private var reminderDateLine: String {
         """
         Start at reminder date: \(recurringReminderStartDate.formatted(date: .abbreviated, time: .shortened))
         Repeats until: \(recurringReminderEndDate.formatted(date: .abbreviated, time: .shortened))
         """
     }
+    
+    // Hard bounds for any reminder: [now ... eventDate].
+    // If eventDate is in the past, this collapses to [now ... now].
+    private var hardBounds: ClosedRange<Date> {
+        let now = Date()
+        return eventDate >= now ? now...eventDate : now...now
+    }
+
+    @inline(__always)
+    private func clamp(_ d: Date, to r: ClosedRange<Date>) -> Date {
+        min(max(d, r.lowerBound), r.upperBound)
+    }
+
+    // Replace your "normalizedUpcoming" with a clamping version instead of dropping dates.
+    private func normalizedClamped(_ dates: [Date]) -> [Date] {
+        let r = hardBounds
+        let keys = Set(dates.map { clamp($0, to: r).timeIntervalSinceReferenceDate })
+        let clamped = keys.map { Date(timeIntervalSinceReferenceDate: $0) }
+            .sorted()
+        return Array(clamped.prefix(100))
+    }
+
+    // Run one pass that clamps all reminder-related state.
+    private func clampAllReminderState() {
+        // 1) single/recurring pickers
+        reminderDate = clamp(reminderDate, to: hardBounds)
+        recurringReminderEndDate = clamp(recurringReminderEndDate, to: reminderDate...hardBounds.upperBound)
+        customReminderInstant = clamp(customReminderInstant, to: hardBounds)
+
+        // 2) preview list (keep entries, clamp them instead of dropping)
+        scheduledReminderDates = normalizedClamped(scheduledReminderDates)
+
+        // 3) per-task saved reminders
+        for i in tasks.indices {
+            if let d = tasks[i].reminderAt {
+                tasks[i].reminderAt = clamp(d, to: hardBounds)
+            }
+        }
+
+        // 4) drafts in the task reminder expander
+        for (tid, d) in taskReminderDraft {
+            taskReminderDraft[tid] = clamp(d, to: hardBounds)
+        }
+    }
+    
+    // Range for the START picker: [hardBounds.lowerBound ... end]
+    // Guarantees lower <= upper even if end < lower momentarily.
+    private var startPickerRange: ClosedRange<Date> {
+        let lb = hardBounds.lowerBound
+        let end = max(recurringReminderEndDate, lb)
+        return lb...end
+    }
+
+    // Range for the END picker: [start ... hardBounds.upperBound]
+    // Guarantees lower <= upper even if start > upper momentarily.
+    private var endPickerRange: ClosedRange<Date> {
+        let ub = hardBounds.upperBound
+        let lb = min(max(recurringReminderStartDate, hardBounds.lowerBound), ub)
+        return lb...ub
+    }
+
+
 
     // --- Small helper to keep ForEach closures tiny
     @ViewBuilder
@@ -266,11 +321,12 @@ struct NewEventPlanView: View {
                 .foregroundColor(.secondary)
 
             DatePicker(
-                "",
-                selection: $reminderDate,
-                in: ...recurringReminderEndDate,    // keep start <= end
-                displayedComponents: [.date, .hourAndMinute]
+              "",
+              selection: $reminderDate,
+              in: startPickerRange,
+              displayedComponents: [.date, .hourAndMinute]
             )
+
             .labelsHidden()
             .datePickerStyle(.compact)
 
@@ -305,11 +361,13 @@ struct NewEventPlanView: View {
                 .foregroundColor(.secondary)
 
             DatePicker(
-                "",
-                selection: $recurringReminderEndDate,
-                in: recurringReminderStartDate...eventDate,   // keep end within event
-                displayedComponents: [.date, .hourAndMinute]
+              "",
+              selection: $recurringReminderEndDate,
+              in: endPickerRange,
+              displayedComponents: [.date, .hourAndMinute]
             )
+
+
             .labelsHidden()
             .datePickerStyle(.compact)
 
@@ -630,6 +688,9 @@ struct NewEventPlanView: View {
                         DatePicker("", selection: $eventDate, displayedComponents: [.date, .hourAndMinute])
                             .labelsHidden()
                             .datePickerStyle(.compact)
+                        Text("Default notification to be sent on \(eventDate.formatted(date: .abbreviated, time: .shortened)).")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
 
                     ReminderSection()
@@ -732,7 +793,9 @@ struct NewEventPlanView: View {
         }
         
         .onAppear {
+            lastEventAnchor = eventDate
             expandedTaskReminderIndex = nil
+            clampAllReminderState()  
         }
         .onChange(of: tasks.count) { _ in
             expandedTaskReminderIndex = nil
@@ -746,44 +809,25 @@ struct NewEventPlanView: View {
                 }
             }
         }
-        .onChange(of: eventDate) { _ in
-            // keep end <= event
-            if recurringReminderEndDate > eventDate { recurringReminderEndDate = eventDate }
+        .onChange(of: eventDate) { new in
+            let old = lastEventAnchor
 
-            // keep custom picker within safe range
-            let r = customPickerSafeRange
-            if customReminderInstant < r.lowerBound { customReminderInstant = r.lowerBound }
-            if customReminderInstant > r.upperBound { customReminderInstant = r.upperBound }
-
-            // keep single reminder date <= event date
-            if reminderDate > eventDate { reminderDate = eventDate }
-            
-            for i in tasks.indices {
-                if let d = tasks[i].reminderAt, d > eventDate {
-                    tasks[i].reminderAt = eventDate
-                }
+            // If the end was equal to the previous event date (user didn’t customize),
+            // keep it “following” the event by moving it to the new event date.
+            if abs(recurringReminderEndDate.timeIntervalSince(old)) < 0.5 {
+                recurringReminderEndDate = new
             }
 
-
-            // re-normalize preview list under new bounds
-            scheduledReminderDates = normalizedUpcoming(scheduledReminderDates)
-        }
-        
-        // If start moves past end, push end up to start. Then re-normalize.
-        .onChange(of: reminderDate) { newStart in
-            if recurringReminderEndDate < newStart {
-                recurringReminderEndDate = newStart
-            }
-            scheduledReminderDates = normalizedUpcoming(scheduledReminderDates)
+            lastEventAnchor = new
+            clampAllReminderState()        // you already have this
         }
 
-        // If end moves earlier, clamp custom picker and re-normalize
+        .onChange(of: reminderDate) { _ in
+            clampAllReminderState()
+        }
         .onChange(of: recurringReminderEndDate) { _ in
-            let r = customPickerSafeRange
-            if customReminderInstant > r.upperBound { customReminderInstant = r.upperBound }
-            scheduledReminderDates = normalizedUpcoming(scheduledReminderDates)
+            clampAllReminderState()
         }
-
 
 
         .onChange(of: makeRecurring) { on in
@@ -877,7 +921,7 @@ struct NewEventPlanView: View {
         }
 
         // --- Build the dates to schedule ---
-        let dates0 = normalizedUpcoming(scheduledReminderDates)
+        let dates0 = normalizedClamped(scheduledReminderDates)
 
         let dates: [Date]
         if makeRecurring {
@@ -898,20 +942,25 @@ struct NewEventPlanView: View {
             }
         }
 
-        let offsetsAll = dates.map { $0.timeIntervalSince(eventDate) }.sorted()
-        let offsets = Array(offsetsAll.prefix(64))
+        // Build offsets relative to eventDate
+        var offsetsAll = dates.map { $0.timeIntervalSince(eventDate) }
+        offsetsAll.append(0) // ensure event-time default
+
+        // unique, sorted, and capped
+        let offsets = Array(Set(offsetsAll)).sorted()
+        let capped = Array(offsets.prefix(64))
+
         let plan = EventPlan(
             name: planName,
             date: eventDate,
             tasks: cleanTasks,
-            reminderOffset: offsets.first ?? 0,   // was -3600
-            reminderOffsets: offsets
+            reminderOffset: 0,              // reflect the default as single-legacy
+            reminderOffsets: capped
         )
 
         modelContext.insert(plan)
+        NotificationHelper.scheduleEventReminders(for: plan, offsets: capped)
 
-        // Schedule Event Reminders
-        NotificationHelper.scheduleEventReminders(for: plan, offsets: offsets)
         
         // NewEventPlanView.savePlan()
         for task in plan.tasks where task.reminderAt != nil {
