@@ -1,13 +1,14 @@
-# PlanPilot
+# ForgetMeNot
 
-PlanPilot is an iOS app that turns photos, voice notes, calendar items, and manual input into actionable event plans with tasks and reminders.
+ForgetMeNot is an iOS app that turns photos, voice notes, calendar items, and manual input into actionable event plans with tasks and reminders.
 
-Note: Some source paths and folders still use `ForgetMeNot`, which was the app's original development name.
+On the App Store, the app is published as **PlanPilot**.
 
-![PlanPilot app preview](ForgetMeNot/Common/Assets.xcassets/appstore.imageset/appstore.png)
+<img src="ForgetMeNot/Common/Assets.xcassets/appstore.imageset/appstore.png" alt="ForgetMeNot app preview" width="260" />
 
 ## App Store
 
+- Listing name: **PlanPilot**
 - Download: https://apps.apple.com/us/app/planpilot/id6751422511
 
 ## Highlights
